@@ -158,6 +158,9 @@ recipe's scale-up bet is C-style N=2 at multi-B tokens; if C's gap does not
 shrink to ≈0.024, the fit (and the crossover story) is wrong. Caveat: smoke
 curves carry a 4000-step cosine tail that inflates late slope; rough numbers.
 
+Actuals: A @490M = **3.8486** (pred 3.8765, fit pessimistic 0.028 — cosine-tail
+caveat confirmed; gap predictions matter more than absolute values).
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
@@ -166,3 +169,19 @@ curves carry a 4000-step cosine tail that inflates late slope; rough numbers.
    smaller effective LR" objection by comparing each arm at its own optimum.
 3. **Round 4** — N-sweep I6/I12 (+unscaled controls) + learnable-λ H/H4 smokes:
    val-loss-vs-N curve at N ∈ {1,2,4,6,12}, fixed 12 applications/token.
+
+## Round-5 decision rule (pre-committed)
+
+Let g(t) = C−A val-loss gap at token count t from round 3.
+
+- **If g(490M) ≤ 0.024** (fit prediction) **and still shrinking**: fit updated
+  crossover; if ≤ ~3B tokens, run the money shot — C vs A (+ F512 if
+  bench_steptime shows headroom) at ~2.5B tokens (102K steps ≈ 4.2 h/arm),
+  2 seeds. Crossover observed in-run = recipe proven, write it up.
+- **If g flat/growing at 490M**: H1(c) refuted at this scale — recurrence
+  does not beat params here even ε-corrected. Pivot: the proven deliverable
+  becomes the ε=1/N + LR-transfer package for *existing* looped archs (Ouro,
+  Loopie fine-tunes), validated by rounds 2/3b/4; no vanilla-beating claim.
+- **Either way**: novelty of the combination is confirmed — 2606.18524 never
+  tests layer-loop (zero mentions) nor a vanilla baseline; Loopie never scales
+  ε. Rounds 2+3b+4 are publishable ablations regardless of crossover.
