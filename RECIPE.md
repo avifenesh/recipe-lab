@@ -204,6 +204,30 @@ rule: pivot. Two live threads —
 3. **Round 4** — N-sweep I6/I12 (+unscaled controls) + learnable-λ H/H4 smokes:
    val-loss-vs-N curve at N ∈ {1,2,4,6,12}, fixed 12 applications/token.
 
+### Round 3b results (LR grid, 2000 steps)
+
+| arm | 3e-4 | 6e-4 | 1.2e-3 |
+|-----|------|------|--------|
+| A (N=1) | 5.3998 | 5.0222 | 4.7608 |
+| B (N=2, ε=1) | 5.4289 | 5.0949 | **4.7588** |
+| C (N=2, ε=1/N) | 5.4109 | 5.0836 | 4.7681 |
+| E1 (N=4, ε=1) | 5.4786 | 5.1515 | 4.9175 |
+| E3 (N=4, ε=1/N) | 5.4397 | 5.0623 | **4.7972** |
+
+Findings:
+1. **N=4: ε does forward-pass work LR cannot buy.** E3@opt beats E1@opt by
+   0.120 — not an LR re-parameterization. At N=2 the effect inverts smally
+   (+0.009, B edges C at 1.2e-3), consistent with N=2 correlation being weak
+   enough for LR to absorb.
+2. **All arms right-censored at 1.2e-3** — true optima higher; grid extends
+   to 2.4e-3/4.8e-3 in round 3c. Proof 4 predicts B/E1 hit the stability edge
+   first; if instead everything keeps improving equally, the smoke-scale LR
+   (6e-4) was just too low and rankings must be re-checked at optimum (hi4k
+   reruns queued).
+3. **B ≈ A at 1.2e-3 (4.7588 vs 4.7608) at 2000 steps** — the fresh-data
+   param-deficit story is LR-sensitive; short-horizon near-parity at higher
+   LR means round-3's 6e-4 verdict is not the final word on H1(c).
+
 ## Round-5 decision rule (pre-committed)
 
 Let g(t) = C−A val-loss gap at token count t from round 3.
