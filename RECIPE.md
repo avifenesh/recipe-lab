@@ -47,6 +47,10 @@ so a single LR works across N (testable by LR sweep at N=1 vs N=2).
   (3.5→6.8→13.6→26.7 as N doubles) vs indep Θ(√N) (2.5→3.6→5.2→7.2). Update
   amplification grows with N unscaled (0.013→0.018), flat when scaled (0.006).
   **CONFIRMED** — pathology survives the normalization used by every modern LM.
+- `proof4_lr_transfer.py` — H2 LR transfer: **CONFIRMED**. Shared-weight net,
+  LR grid {3e-3…3}, N∈{1,2,4,8}. Unscaled optimal LR drops 10× at N=8
+  (diverges at LR≥1); ε=1/N keeps optimal LR pinned at the N=1 value for all N.
+  GPU grid (round 3b) tests the same claim in the real transformer.
 
 ## Experiment design (rented L40S, 46GB)
 
