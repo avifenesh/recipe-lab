@@ -141,6 +141,14 @@ Re-read 2607.16051 in full. Two facts change the H1(c) design:
 `bench_steptime.py` picks the width. H1(c) restated: **F < A at equal
 wall-clock and tokens**, with ε=1/N doing work B-style unscaled F cannot.
 
+Bench actuals (L40S, batch 24×1024): A=137.0 ms/step 18.2GB; F384=135.3 ms
+18.1GB; F448=154.1 (+12%); F512=172.4 (+26%). **Looping frees no wall-clock
+at this scale** — the Loopie reinvestment step needs the MoE memory pressure
+of 20B-scale training to produce headroom; a 40M dense model has none. The
+wall-clock-matched F arm degenerates to C. F448/F512 runs would be
+compute-UNmatched → dropped. H1(c) at toy dense scale is C vs A, already
+answered: refuted on fresh data, pending on repeated data (round 5).
+
 ### Pre-registered round-3 predictions (fit before data, 2026-08-03)
 
 Loss-law fit `L(D) = E + B·D^-β` per arm on the 98M-token smoke curves
