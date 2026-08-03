@@ -238,9 +238,11 @@ Findings:
 | 6 | 2 | 4.6779 | 4.6140 | +0.0639 |
 | 12 | 1 | 4.8687 | 4.7341 | +0.1346 |
 
-- **ε gain doubles with each N doubling** (≈0.006→0.034→0.064→0.135):
-  empirically ~linear in N, matching the Θ(N²)→Θ(N) energy correction. At
-  N=12 the fix recovers 32% of the loop's deficit vs vanilla.
+- **ε gain = 0.0122·(N−1), R²=0.993** — linear in N with the correct anchor
+  (N=1: no loop, no correlation, zero gain). Beats gain∝N (R²=0.96),
+  ∝log N (0.76), power law N^1.77 (0.95). Matches the theory: the correlated
+  term the fix removes is the (N−1)-term cross-covariance sum. At N=12 the
+  fix recovers 32% of the loop's deficit vs vanilla.
 - Val loss still monotone in N on fresh data — param starvation dominates;
   no free lunch from recurrence alone at this scale (consistent with rd 3).
 - Learnable λ: ±0.005, noise-level. Fixed λ=1 is fine; drop the H arms.
