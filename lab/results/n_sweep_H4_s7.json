@@ -1,0 +1,158 @@
+{
+ "arm": "H4",
+ "seed": 7,
+ "params": 24640899,
+ "config": {
+  "arm": "H4",
+  "steps": 4000,
+  "batch_size": 24,
+  "block_size": 1024,
+  "lr": 0.0006,
+  "warmup": 200,
+  "seed": 7,
+  "data": "data/fineweb_train.bin",
+  "val_data": "data/fineweb_val.bin",
+  "eval_every": 250,
+  "out": "results/n_sweep_H4_s7.json"
+ },
+ "curve": [
+  {
+   "step": 0,
+   "tokens": 0,
+   "train_loss": 10.9171,
+   "val_loss": 10.8916,
+   "gnorm": 8.673,
+   "sec": 2.7
+  },
+  {
+   "step": 250,
+   "tokens": 6144000,
+   "train_loss": 6.5086,
+   "val_loss": 6.4995,
+   "gnorm": 0.647,
+   "sec": 39.2
+  },
+  {
+   "step": 500,
+   "tokens": 12288000,
+   "train_loss": 5.945,
+   "val_loss": 6.0519,
+   "gnorm": 0.506,
+   "sec": 75.8
+  },
+  {
+   "step": 750,
+   "tokens": 18432000,
+   "train_loss": 5.652,
+   "val_loss": 5.716,
+   "gnorm": 0.762,
+   "sec": 112.3
+  },
+  {
+   "step": 1000,
+   "tokens": 24576000,
+   "train_loss": 5.324,
+   "val_loss": 5.4522,
+   "gnorm": 0.679,
+   "sec": 148.8
+  },
+  {
+   "step": 1250,
+   "tokens": 30720000,
+   "train_loss": 5.325,
+   "val_loss": 5.2598,
+   "gnorm": 0.716,
+   "sec": 185.3
+  },
+  {
+   "step": 1500,
+   "tokens": 36864000,
+   "train_loss": 5.0084,
+   "val_loss": 5.0882,
+   "gnorm": 0.856,
+   "sec": 221.7
+  },
+  {
+   "step": 1750,
+   "tokens": 43008000,
+   "train_loss": 4.9444,
+   "val_loss": 4.9503,
+   "gnorm": 0.856,
+   "sec": 258.2
+  },
+  {
+   "step": 2000,
+   "tokens": 49152000,
+   "train_loss": 4.8377,
+   "val_loss": 4.8491,
+   "gnorm": 0.894,
+   "sec": 294.7
+  },
+  {
+   "step": 2250,
+   "tokens": 55296000,
+   "train_loss": 4.6986,
+   "val_loss": 4.7733,
+   "gnorm": 0.811,
+   "sec": 331.2
+  },
+  {
+   "step": 2500,
+   "tokens": 61440000,
+   "train_loss": 4.6373,
+   "val_loss": 4.717,
+   "gnorm": 0.939,
+   "sec": 367.8
+  },
+  {
+   "step": 2750,
+   "tokens": 67584000,
+   "train_loss": 4.6248,
+   "val_loss": 4.6657,
+   "gnorm": 0.807,
+   "sec": 404.3
+  },
+  {
+   "step": 3000,
+   "tokens": 73728000,
+   "train_loss": 4.5801,
+   "val_loss": 4.6291,
+   "gnorm": 0.857,
+   "sec": 440.8
+  },
+  {
+   "step": 3250,
+   "tokens": 79872000,
+   "train_loss": 4.6558,
+   "val_loss": 4.5981,
+   "gnorm": 0.882,
+   "sec": 477.3
+  },
+  {
+   "step": 3500,
+   "tokens": 86016000,
+   "train_loss": 4.5358,
+   "val_loss": 4.5741,
+   "gnorm": 0.882,
+   "sec": 513.8
+  },
+  {
+   "step": 3750,
+   "tokens": 92160000,
+   "train_loss": 4.4842,
+   "val_loss": 4.5571,
+   "gnorm": 0.834,
+   "sec": 550.3
+  },
+  {
+   "step": 3999,
+   "tokens": 98279424,
+   "train_loss": 4.4051,
+   "val_loss": 4.5448,
+   "gnorm": 0.867,
+   "sec": 586.7
+  }
+ ],
+ "final_val": 4.5448,
+ "wall_sec": 586.7
+}

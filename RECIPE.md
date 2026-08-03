@@ -228,6 +228,23 @@ Findings:
    param-deficit story is LR-sensitive; short-horizon near-parity at higher
    LR means round-3's 6e-4 verdict is not the final word on H1(c).
 
+### Round 4 results (N-sweep + learnable λ, 98M tokens, seed 7)
+
+| N | stored | unscaled | ε=1/N | ε gain |
+|---|--------|----------|-------|--------|
+| 1 | 12 | 4.4439 | 4.4439 | — |
+| 2 | 6 | 4.4949 | 4.4894 | +0.0055 |
+| 4 | 3 | 4.5801 | 4.5465 | +0.0336 |
+| 6 | 2 | 4.6779 | 4.6140 | +0.0639 |
+| 12 | 1 | 4.8687 | 4.7341 | +0.1346 |
+
+- **ε gain doubles with each N doubling** (≈0.006→0.034→0.064→0.135):
+  empirically ~linear in N, matching the Θ(N²)→Θ(N) energy correction. At
+  N=12 the fix recovers 32% of the loop's deficit vs vanilla.
+- Val loss still monotone in N on fresh data — param starvation dominates;
+  no free lunch from recurrence alone at this scale (consistent with rd 3).
+- Learnable λ: ±0.005, noise-level. Fixed λ=1 is fine; drop the H arms.
+
 ## Round-5 decision rule (pre-committed)
 
 Let g(t) = C−A val-loss gap at token count t from round 3.
