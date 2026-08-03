@@ -50,6 +50,13 @@ ARMS = {
               learn_lambda=True),
     "H4": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25,
                learn_lambda=True),
+    # I arms: N-sweep at fixed 12 applications/token — where does recurrence
+    # stop substituting for params? With A/B/C/E1/E3 this gives val loss vs N
+    # for N in {1,2,4,6,12}, scaled and unscaled.
+    "I6": dict(n_stored=2, n_loop=6, schedule="layer", res_scale=1 / 6),
+    "I6u": dict(n_stored=2, n_loop=6, schedule="layer", res_scale=1.0),
+    "I12": dict(n_stored=1, n_loop=12, schedule="layer", res_scale=1 / 12),
+    "I12u": dict(n_stored=1, n_loop=12, schedule="layer", res_scale=1.0),
 }
 
 
