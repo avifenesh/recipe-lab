@@ -141,6 +141,23 @@ Re-read 2607.16051 in full. Two facts change the H1(c) design:
 `bench_steptime.py` picks the width. H1(c) restated: **F < A at equal
 wall-clock and tokens**, with ε=1/N doing work B-style unscaled F cannot.
 
+### Pre-registered round-3 predictions (fit before data, 2026-08-03)
+
+Loss-law fit `L(D) = E + B·D^-β` per arm on the 98M-token smoke curves
+(steps ≥750), extrapolated to 490M tokens:
+
+| arm | E (irreducible) | β | pred val @490M | pred gap vs A |
+|-----|------|------|------|------|
+| A | 3.507 | 0.550 | 3.8765 | — |
+| C | 3.464 | 0.506 | 3.9001 | +0.024 (was +0.046 @98M) |
+| E3 | 3.872 | 0.641 | 4.1012 | +0.225 (grows) |
+
+Fitted C's asymptote sits **below** A's → predicted C−A crossover ≈ **2.1B
+tokens**. E3 never crosses (fit). If round 3 lands near these numbers, the
+recipe's scale-up bet is C-style N=2 at multi-B tokens; if C's gap does not
+shrink to ≈0.024, the fit (and the crossover story) is wrong. Caveat: smoke
+curves carry a 4000-step cosine tail that inflates late slope; rough numbers.
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
