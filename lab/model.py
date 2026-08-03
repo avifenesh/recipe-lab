@@ -31,6 +31,7 @@ class GPTConfig:
     n_loop: int = 1      # applications per block (schedule decides ordering)
     schedule: str = "vanilla"  # vanilla | layer | model
     res_scale: float = 1.0
+    learn_lambda: bool = False  # per-block learnable multiplier on res_scale
     dropout: float = 0.0
 
 
@@ -45,13 +46,17 @@ class Block(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(d, 4 * d), nn.GELU(), nn.Linear(4 * d, d),
         )
+        # lambda in eps = lambda/(N sqrt(L)): learnable per block, init 1
+        self.lam = (nn.Parameter(torch.ones(())) if cfg.learn_lambda
+                    else None)
 
     def forward(self, x, attn_mask, res_scale: float):
+        s = res_scale if self.lam is None else res_scale * self.lam
         h = self.ln1(x)
         a, _ = self.attn(h, h, h, attn_mask=attn_mask, need_weights=False,
                          is_causal=True)
-        x = x + res_scale * a
-        x = x + res_scale * self.mlp(self.ln2(x))
+        x = x + s * a
+        x = x + s * self.mlp(self.ln2(x))
         return x
 
 

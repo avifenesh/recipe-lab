@@ -44,6 +44,12 @@ ARMS = {
                  d_model=448, n_head=7),
     "G512": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=1.0,
                  d_model=512, n_head=8),
+    # H: arm C with learnable per-block lambda (the full eps = lambda/(N sqrt L)
+    # form from 2606.18524; C fixes lambda=1)
+    "H": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+              learn_lambda=True),
+    "H4": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25,
+               learn_lambda=True),
 }
 
 
