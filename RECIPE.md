@@ -69,3 +69,48 @@ winner to 1B tokens, 3 seeds.
 
 Success bar: C < B and C < A on val loss at matched compute, stable across seeds,
 gap not shrinking with training — then worth scaling.
+
+## Results
+
+### Round 1 — smoke, 4000 steps ≈ 98M tokens, seed 7
+
+| arm | desc | params | final val |
+|-----|------|--------|-----------|
+| A | vanilla L12 | 40.6M | **4.4439** |
+| B | layer-loop 6×2 ε=1 | 30.0M | 4.4949 |
+| C | layer-loop 6×2 ε=1/N | 30.0M | 4.4894 |
+| D | model-loop 6×2 ε=1/N | 30.0M | 4.5231 |
+
+- C−B = −0.0055 (scaling fix wins), C−D = −0.0337 (layer-loop ordering wins,
+  reproduces Loopie), C−A = +0.0455 (**vanilla still wins** — Loopie's headline
+  does not reproduce at 30-40M params / 98M tokens).
+
+### Round 2 — ε ladder at N=4, multi-seed, LR probe
+
+N=4 ladder (3 stored blocks × 4 loops, same 12 applications/token), seed 7:
+
+| ε | final val |
+|---|-----------|
+| 1 (E1) | 4.5801 |
+| 1/√N = 0.5 (E2) | 4.5579 |
+| 1/N = 0.25 (E3) | **4.5465** |
+
+Monotone in exactly the order Thm 1 predicts. E1−E3 gap = 0.034 ≈ 6× the N=2
+C−B gap — the ε effect grows with N as theory says. Token-equivalent lead:
+ε=1/N reaches ε=1's final loss 545 steps (13.6% of run) earlier.
+
+Multi-seed C−B at N=2: −0.0055 (s7), −0.0079 (s13), −0.0099 (s29).
+**Sign stable 3/3 seeds, mean −0.0078.** The scaling fix is real.
+
+### Verdict so far
+
+H1 parts (a),(b) **CONFIRMED**: ε=1/N beats unscaled layer-loop (3 seeds) and
+scaled model-loop. Effect grows with N. H1 part (c) **NOT confirmed**: vanilla
+beats all looped arms at ~2-3 tokens/param — this regime is maximally
+param-hungry, and looped arms have 25-50% fewer params. Ouro-class wins are
+reported at ≫Chinchilla tokens/param.
+
+**H3 (round 3)**: the A−C(−E3) gap closes and flips in the overtrained regime.
+20K steps = 490M tokens → A at ~23 tok/param (1.2× Chinchilla), C at ~46 (2.3×),
+E3 at ~92 (4.6×). If the gap is flat or growing at 490M tokens, H1(c) is
+refuted at this scale and the recipe only pays as a param-compression trick.
