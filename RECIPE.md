@@ -164,7 +164,8 @@ caveat confirmed; gap predictions matter more than absolute values).
 ### Round 3 verdict — crossover REFUTED on fresh data
 
 C−A gap by tokens: +0.020 @49M → +0.044 @98M → +0.059 @246M → **+0.0755 @490M**.
-Monotonically GROWING, not shrinking. The loss-law fit's below-A asymptote for
+E3−A: +0.050 @49M → **+0.1555 @490M** (grows faster, as the higher-N/lower-param
+arm should). Both monotonically GROWING, not shrinking. The loss-law fit's below-A asymptote for
 C was an artifact of the cosine tail. On fresh (single-epoch) data, stored
 params beat recurrence at matched FLOPs, and the deficit widens with tokens —
 consistent with Loopie's own MoE framing (their looped arms hold total params
