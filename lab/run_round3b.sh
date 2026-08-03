@@ -13,10 +13,15 @@
 # at this scale (Loopie recipe step iii).
 set -e
 ~/venv/bin/python bench_steptime.py 2>&1
-for lr in 6e-4 1.2e-3; do
+# 3-point LR grid. The discriminating question: is eps=1/N a genuinely better
+# recipe, or just an LR re-parameterization? If the latter, B at its own
+# optimal LR (likely lower than 6e-4, since unscaled looping amplifies
+# updates) matches C at its optimum. If C's optimum beats B's optimum,
+# eps does forward-pass work LR cannot.
+for lr in 3e-4 6e-4 1.2e-3; do
   for arm in A B C E1 E3; do
     # hilr_B_s7 / hilr_C_s7 already exist from round 2 (same config)
-    [ "$lr" = "1.2e-3" ] && [ "$arm" = "B" -o "$arm" = "C" ] && continue
+    [ "$lr" = "1.2e-3" ] && { [ "$arm" = "B" ] || [ "$arm" = "C" ]; } && continue
     ~/venv/bin/python train.py --arm $arm --steps 2000 --seed 7 --lr $lr \
       --out results/lr2k_${arm}_${lr}.json 2>&1 | tail -1
   done
