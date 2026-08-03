@@ -33,6 +33,17 @@ ARMS = {
     "E1": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=1.0),
     "E2": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.5),
     "E3": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25),
+    # F arms: full Loopie recipe — loop frees step-time headroom, reinvest it
+    # into width until measured ms/step matches arm A (bench_steptime.py picks
+    # the width). F<n> = eps=1/N, G<n> = unscaled control at the same width.
+    "F448": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                 d_model=448, n_head=7),
+    "F512": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                 d_model=512, n_head=8),
+    "G448": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=1.0,
+                 d_model=448, n_head=7),
+    "G512": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=1.0,
+                 d_model=512, n_head=8),
 }
 
 

@@ -114,3 +114,25 @@ reported at ≫Chinchilla tokens/param.
 20K steps = 490M tokens → A at ~23 tok/param (1.2× Chinchilla), C at ~46 (2.3×),
 E3 at ~92 (4.6×). If the gap is flat or growing at 490M tokens, H1(c) is
 refuted at this scale and the recipe only pays as a param-compression trick.
+
+### Loopie deep-read correction (2026-08-03)
+
+Re-read 2607.16051 in full. Two facts change the H1(c) design:
+
+1. **Loopie's crossover vs compute-matched vanilla happens at ~600B tokens**
+   (20B-A2B model); vanilla leads before that. Layer-loop overtakes model-loop
+   at ~1.2T tokens. Our 98M-token smoke could not have shown the win — round 1
+   "refutation" of H1(c) was premature, regime was wrong, not the recipe.
+2. **The Loopie Recipe is 3 steps, not 2**: (i) halve stored layers, (ii)
+   layer-loop ×2, (iii) reinvest the freed memory headroom (2× microbatch, then
+   extra capacity) until *measured step time* matches the reference. Compute
+   matching is wall-clock, not analytical FLOPs. Arms B/C/D only do (i)+(ii) —
+   they are the "parameter-saving device" the paper says loses under fixed
+   compute. The honest H1(c) arm is:
+
+| arm | architecture | matching |
+|-----|-------------|----------|
+| F | layer-loop 6×2, ε=1/N, d_model widened (448/512/576) | measured ms/step == arm A |
+
+`bench_steptime.py` picks the width. H1(c) restated: **F < A at equal
+wall-clock and tokens**, with ε=1/N doing work B-style unscaled F cannot.
