@@ -181,6 +181,11 @@ rule: pivot. Two live threads —
    if (C−A)|repeated ≪ +0.0755 or negative, the recipe's home is
    data-constrained pretraining — which is where the field is heading.
 
+   Independent support: ELT (2604.09168) finds looped transformers "exhibit
+   robustness against overfitting in data-constrained regimes" — but for
+   visual generation, never tested for LM pretraining, and never with ε
+   scaling. The H5 combination stays novel.
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
