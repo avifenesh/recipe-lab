@@ -195,6 +195,13 @@ rule: pivot. Two live threads —
    visual generation, never tested for LM pretraining, and never with ε
    scaling. The H5 combination stays novel.
 
+   Pre-registered expectation (Muennighoff R*≈15): 9.8 epochs ≈ 383M
+   effective tokens of 491M spent — a mild penalty shared by both arms.
+   Prediction: C−A gap *shrinks* vs the fresh +0.0755 (overfit tax hits the
+   41M-param A harder than 30M-param C) but likely stays positive; a flip
+   at this epoch count would be a strong result, expect it only if A's val
+   curve visibly turns up.
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
