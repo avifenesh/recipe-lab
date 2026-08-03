@@ -28,6 +28,11 @@ ARMS = {
     "B": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=1.0),
     "C": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5),
     "D": dict(n_stored=6, n_loop=2, schedule="model", res_scale=0.5),
+    # N=4 ladder: same 12 block-applications/token, discriminating test of
+    # eps ordering 1/N < 1/sqrt(N) < 1 predicted by Thm 1 (2606.18524)
+    "E1": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=1.0),
+    "E2": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.5),
+    "E3": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25),
 }
 
 
