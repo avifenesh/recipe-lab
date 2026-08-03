@@ -161,6 +161,26 @@ curves carry a 4000-step cosine tail that inflates late slope; rough numbers.
 Actuals: A @490M = **3.8486** (pred 3.8765, fit pessimistic 0.028 — cosine-tail
 caveat confirmed; gap predictions matter more than absolute values).
 
+### Round 3 verdict — crossover REFUTED on fresh data
+
+C−A gap by tokens: +0.020 @49M → +0.044 @98M → +0.059 @246M → **+0.0755 @490M**.
+Monotonically GROWING, not shrinking. The loss-law fit's below-A asymptote for
+C was an artifact of the cosine tail. On fresh (single-epoch) data, stored
+params beat recurrence at matched FLOPs, and the deficit widens with tokens —
+consistent with Loopie's own MoE framing (their looped arms hold total params
+high via experts; dense layer-looping halves capacity, full stop).
+
+**H1(c) refuted at this scale for the fresh-data regime.** Per the decision
+rule: pivot. Two live threads —
+1. ε=1/N + LR-transfer package (rounds 2, 3b, 4): proven, publishable,
+   applies to any looped arch (Ouro/Loopie-class).
+2. **H5 (round 5): the data-constrained regime.** The frontier constraint is
+   the data wall, not params. Repeating data ~10 epochs, memorization capacity
+   (∝ params) matters less and compute-per-token more (Muennighoff 2023:
+   >4 epochs, params saturate). Same 20K steps on a 50M-token subset:
+   if (C−A)|repeated ≪ +0.0755 or negative, the recipe's home is
+   data-constrained pretraining — which is where the field is heading.
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
