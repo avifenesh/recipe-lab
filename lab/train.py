@@ -57,6 +57,22 @@ ARMS = {
     "I6u": dict(n_stored=2, n_loop=6, schedule="layer", res_scale=1.0),
     "I12": dict(n_stored=1, n_loop=12, schedule="layer", res_scale=1 / 12),
     "I12u": dict(n_stored=1, n_loop=12, schedule="layer", res_scale=1.0),
+    # M arms: Mamba-style selective-SSM mixer — same three-way comparison as
+    # A/B/C but with the SSM in the residual branch. Proof 5 says the
+    # correlated-accumulation pathology is mixer-agnostic; LT2 reports looped
+    # SSM instabilities. Prediction: MC < MB, and the MB-MC gap exceeds the
+    # attention B-C gap because SSM state recurrence compounds the loop
+    # correlation across time as well as depth.
+    "MA": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+               mixer="ssm"),
+    "MB": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=1.0,
+               mixer="ssm"),
+    "MC": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+               mixer="ssm"),
+    "MB4": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=1.0,
+                mixer="ssm"),
+    "MC4": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25,
+                mixer="ssm"),
 }
 
 

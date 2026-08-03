@@ -32,7 +32,37 @@ class GPTConfig:
     schedule: str = "vanilla"  # vanilla | layer | model
     res_scale: float = 1.0
     learn_lambda: bool = False  # per-block learnable multiplier on res_scale
+    mixer: str = "attn"  # attn | ssm (selective scan, Mamba-style)
+    d_state: int = 16    # SSM state size (mixer="ssm" only)
     dropout: float = 0.0
+
+
+class SelectiveSSM(nn.Module):
+    """Minimal S6-style selective scan: input-dependent step size, diagonal
+    state decay, gated output. Exact scan via log-space cumulative products."""
+
+    def __init__(self, cfg: GPTConfig):
+        super().__init__()
+        d, ds = cfg.d_model, cfg.d_state
+        self.W_dt = nn.Linear(d, 1)
+        self.a_log = nn.Parameter(torch.zeros(ds))
+        self.B = nn.Linear(d, ds, bias=False)
+        self.C = nn.Linear(ds, d, bias=False)
+        self.D = nn.Parameter(torch.zeros(d))
+        self.gate = nn.Linear(d, d, bias=False)
+        self.out = nn.Linear(d, d, bias=False)
+
+    def forward(self, x):
+        # x: (B, T, D). s_t = exp(decay_t) s_{t-1} + u_t, causal by cumsum.
+        # Scan runs in fp32: u/P spans up to e^30, far past bf16 range.
+        dt = F.softplus(self.W_dt(x)).float()              # (B, T, 1)
+        decay = -F.softplus(self.a_log.float())[None, None] * dt
+        u = dt * self.B(x).float()                         # (B, T, ds)
+        logP = decay.cumsum(dim=1).clamp(min=-30.0)        # running log-decay
+        P = logP.exp()
+        s = P * (u / P).cumsum(dim=1)
+        y = self.C(s.to(x.dtype)) + x * self.D
+        return self.out(y * F.silu(self.gate(x)))
 
 
 class Block(nn.Module):
@@ -40,8 +70,13 @@ class Block(nn.Module):
         super().__init__()
         d = cfg.d_model
         self.ln1 = nn.LayerNorm(d)
-        self.attn = nn.MultiheadAttention(d, cfg.n_head, dropout=cfg.dropout,
-                                          bias=True, batch_first=True)
+        if cfg.mixer == "ssm":
+            self.attn = None
+            self.ssm = SelectiveSSM(cfg)
+        else:
+            self.attn = nn.MultiheadAttention(d, cfg.n_head,
+                                              dropout=cfg.dropout,
+                                              bias=True, batch_first=True)
         self.ln2 = nn.LayerNorm(d)
         self.mlp = nn.Sequential(
             nn.Linear(d, 4 * d), nn.GELU(), nn.Linear(4 * d, d),
@@ -53,8 +88,11 @@ class Block(nn.Module):
     def forward(self, x, attn_mask, res_scale: float):
         s = res_scale if self.lam is None else res_scale * self.lam
         h = self.ln1(x)
-        a, _ = self.attn(h, h, h, attn_mask=attn_mask, need_weights=False,
-                         is_causal=True)
+        if self.attn is None:
+            a = self.ssm(h)
+        else:
+            a, _ = self.attn(h, h, h, attn_mask=attn_mask, need_weights=False,
+                             is_causal=True)
         x = x + s * a
         x = x + s * self.mlp(self.ln2(x))
         return x
@@ -80,7 +118,8 @@ class GPT(nn.Module):
         # share identical init statistics per applied block
         eff_depth = self.effective_depth()
         for n, p in self.named_parameters():
-            if n.endswith("mlp.2.weight") or n.endswith("attn.out_proj.weight"):
+            if n.endswith(("mlp.2.weight", "attn.out_proj.weight",
+                           "ssm.out.weight")):
                 nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * eff_depth))
 
     def _init(self, m):
