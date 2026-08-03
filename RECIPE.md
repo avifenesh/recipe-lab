@@ -140,3 +140,12 @@ Re-read 2607.16051 in full. Two facts change the H1(c) design:
 
 `bench_steptime.py` picks the width. H1(c) restated: **F < A at equal
 wall-clock and tokens**, with ε=1/N doing work B-style unscaled F cannot.
+
+## Queue on box (serial, 2026-08-03 evening)
+
+1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
+2. **Round 3b** — bench_steptime + LR grid {3e-4, 6e-4, 1.2e-3} × {A,B,C,E1,E3}
+   at 2000 steps: (a) real-transformer H2 test, (b) kills the "ε is just a
+   smaller effective LR" objection by comparing each arm at its own optimum.
+3. **Round 4** — N-sweep I6/I12 (+unscaled controls) + learnable-λ H/H4 smokes:
+   val-loss-vs-N curve at N ∈ {1,2,4,6,12}, fixed 12 applications/token.
