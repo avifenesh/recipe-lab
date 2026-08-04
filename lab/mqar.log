@@ -1,0 +1,12 @@
+=== MQAR grid (mean of 2 seeds) ===
+ d_state   kv  L1(4 stored)  L4(1x4 eps=1/4)  L4u(eps=1)
+       8    4         21.4%            18.6%       16.2%
+       8   16          2.2%             3.8%        1.7%
+      64    4         23.8%            59.8%       38.8%
+      64   16          3.9%             2.1%        1.6%
+
+=== Test-time loop elasticity (L4 trained N=4, d_state=64, kv=16) ===
+ N_eval  eps readjusted  eps frozen=1/4
+      2           1.8%            1.7%   (logit norms 80.1 / 75.7)
+      4           2.0%            2.0%   (logit norms 75.6 / 75.6)
+      8           1.8%            1.7%   (logit norms 74.0 / 74.5)

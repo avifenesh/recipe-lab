@@ -175,8 +175,8 @@ def main():
                        f" {100*np.mean(accs):>10.1f}%"
             print(row, flush=True)
 
-    print("\n=== Test-time loop elasticity (L4 trained N=4, d_state=64, kv=16) ===")
-    m, xte, yte = models[(64, 16)]
+    print("\n=== Test-time loop elasticity (L4 trained N=4, d_state=64, kv=4) ===")
+    m, xte, yte = models[(64, 4)]   # the cell where L4 actually works (59%)
     vocab = 2 + 2 * 64
     mask = yte >= 0
     print(f"{'N_eval':>7} {'eps readjusted':>15} {'eps frozen=1/4':>15}")
