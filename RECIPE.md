@@ -323,6 +323,32 @@ Caveat before excitement: SSM absolute losses are ~0.7 worse than attention
 at this scale (custom minimal S6, no conv, single-head dt) — the win is
 *within-family*. Still the first sign of loop-beats-params on fresh data.
 
+### Round 7 results — 39 epochs (12.5M unique tokens × 20K steps)
+
+| arm | best val (step) | final val | degradation past best |
+|-----|-----------------|-----------|----------------------|
+| A (40.6M) | **4.5734** (4500) | 5.6426 | **+1.069** |
+| C (30.0M) | 4.5871 (4500) | 5.1075 | +0.520 |
+| E3 (24.6M) | 4.6172 (6250) | 4.9002 | **+0.283** |
+
+The overfit cliff is **param-ordered and dramatic**: past the val minimum, A
+degrades 3.8× more than E3, 2.1× more than C. C−A goes from +0.014 at the
+minimum to **−0.535** at 20K steps; the crossover happens by ~step 6500
+(≈13 epochs). Deeper-N arms hold their minima longer (E3 bottoms at 6250 vs
+4500) and degrade least.
+
+Honest read (both sides):
+- With early stopping, A still wins by +0.014 — looping does NOT beat params
+  on best-achievable val loss even at 39 epochs. H7-as-stated: not confirmed.
+- But the *training-robustness* claim is strong: in the regime where the data
+  wall forces many epochs, the looped+scaled arm is far harder to destroy by
+  overtraining. In any real pipeline where the token budget exceeds the
+  early-stop point (continued pretraining, data-mixing, anneal phases),
+  weight-shared recurrence acts as param-count-independent regularization.
+- ε's role: unscaled B/E1 comparison absent here (deliberate, 3 arms/round);
+  the C-vs-A contrast alone establishes loop-as-regularizer; ε keeps the
+  looped arm trainable (rounds 2-4) so the two compose.
+
 ## Round-5 decision rule (pre-committed)
 
 Let g(t) = C−A val-loss gap at token count t from round 3.
