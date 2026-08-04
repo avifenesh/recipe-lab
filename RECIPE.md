@@ -275,6 +275,9 @@ All optima interior at 2.4e-3. Three GPU-scale confirmations:
    range); unscaled looped arms are the most LR-fragile, worse than vanilla.
 3. **A@opt still < C@opt on fresh data** (4.5825 vs 4.6151): H1(c) verdict
    unchanged by LR — param deficit is real, not a tuning artifact.
+4. hi4k reruns (4000 steps @1.2e-3): A 4.2822 < C 4.3229 < B 4.3285 <
+   E3 4.3891 < E1 4.4416 — same ordering as 6e-4, C>B reverses back in C's
+   favor at the longer horizon. All rounds' rankings are LR-stable.
 
 ### Round 4 results (N-sweep + learnable λ, 98M tokens, seed 7)
 
