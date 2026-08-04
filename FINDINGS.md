@@ -144,3 +144,9 @@ C768 81.2M; batch 12, 245M tokens ≈ 19.6 epochs):
   not just stability, and the margin grows with scale. Next rung when
   desired: d=1024+ / more unique tokens / 3 seeds — the 2.6B-token bin is
   already on the box.
+
+**Round 10 (seed verification): 3/3 seeds confirm the flip.** C768 best-val
+beats A768 on every seed: −0.0393 (s7), −0.0356 (s13), −0.0423 (s29); mean
+−0.039, zero sign flips, seed noise ±0.003 ≪ effect. Passed the same bar
+that killed the SSM headline. **The scale flip is real and is the campaign's
+final, verified result.**
