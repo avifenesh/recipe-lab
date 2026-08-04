@@ -185,13 +185,11 @@ was looping attention through shared weights itself, not placement.
 HE768 keeps every attention application un-looped and loops only the SSM
 blocks (stored [a,s,s,s,a,s,s] × ssm-loop-2 → 2 attn + 10 ssm apps, attn at
 0,7; 82.5M params vs HA768 112.2M). Seed 7: best-val **4.6926 < HA768
-4.7104 (−0.0178)**, degradation +1.581 < +2.070. The rule this isolates,
+4.7104 (−0.0178)**, degradation +1.581 < +2.070. Seed 13: **4.6805 < HA768
+4.7281 (−0.0476)**. 2/2 seeds — the hybrid win clears the same
+no-single-seed bar as the other two families. The rule this isolates,
 consistent across HC/HD/HE: shared-weight reuse helps SSM blocks and hurts
-attention blocks. Caveat kept honest: the HE768 seed-13 leg finished (best
-4.6805, `results/epoch39_HE768_s13.json`) but its HA768 s13 comparator never
-ran, so the hybrid win stands at one compared seed and does not clear the
-no-single-seed bar the pure-SSM result cleared. The pure-SSM flip (2/2) is
-the round's verified claim.
+attention blocks.
 
 **P4 — hybrid > pure-SSM at matched schedule: CONFIRMED.** HA768 4.7104 <
 MA768 5.0297; HE768 4.6926 < MC768 5.0034 (seed 7). Attention's 2/12 share
@@ -237,14 +235,15 @@ Grid — accuracy at d_state ∈ {8, 64} × kv_pairs ∈ {4, 16}:
 Everything from the round-8-era verdict stands, with three additions proven
 since:
 
-5. **The flip scales and generalizes.** In the data-constrained regime the
-   loop+ε arm beat the param-matched vanilla on best-achievable val at
-   d=768 for attention (3/3 seeds, −0.039) and pure SSM (2/2 seeds, −0.026/
-   −0.013) — not just robustness, outright quality.
+5. **The flip scales and generalizes — three for three.** In the
+   data-constrained regime the loop+ε arm beat the param-matched vanilla on
+   best-achievable val at d=768 in every mixer family, zero sign flips
+   across 7 paired runs: attention 3/3 seeds (−0.039 mean), pure SSM 2/2
+   (−0.026/−0.013), hybrid ssmloop 2/2 (−0.018/−0.048).
 6. **Loop the state-mixer, never the retriever.** In hybrids, loop only SSM
-   blocks and apply each attention block once (HE768-style): −0.018 vs
-   vanilla hybrid with 26% fewer params (one compared seed). Layer-looping
-   or model-looping the attention blocks cost +0.25-0.28.
+   blocks and apply each attention block once (HE768-style): wins 2/2 seeds
+   with 26% fewer params. Layer-looping or model-looping the attention
+   blocks cost +0.25-0.28 — placement-independent.
 7. **At inference, extrapolate loops with the training ε** (MQAR P4).
    Looped SSMs are also the only variant with an inference-memory win: state
    stays O(d_state·d) no matter how many times you loop.
