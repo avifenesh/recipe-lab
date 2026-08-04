@@ -97,6 +97,14 @@ ARMS = {
     # to HA768. Placement dominates schedule for hybrids.
     "HD768": dict(n_stored=6, n_loop=2, schedule="model", res_scale=0.5,
                   d_model=768, n_head=12, mixer="hybrid", attn_every=6),
+    # HE: ssmloop hybrid — HD also lost (+0.25): looping attention through
+    # shared weights hurts regardless of placement. So loop ONLY the SSM
+    # blocks: stored = [attn,ssm,ssm,ssm,attn,ssm,ssm], attn applied once,
+    # ssm looped 2x -> apps = [a0,s1,s1,s2,s2,s3,s3,a4,s5,s5,s6,s6], attention
+    # at positions 0,7 (~HA768's 0,6), 2 attn + 10 ssm apps. Params: 2 attn +
+    # 5 ssm stored vs HA768's 2+10 — halves SSM storage only.
+    "HE768": dict(n_stored=7, n_loop=2, schedule="ssmloop", res_scale=0.5,
+                  d_model=768, n_head=12, mixer="hybrid", attn_every=4),
 }
 
 

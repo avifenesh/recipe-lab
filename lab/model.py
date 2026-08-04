@@ -156,6 +156,12 @@ class GPT(nn.Module):
             return [i for i in range(c.n_stored) for _ in range(c.n_loop)]
         if c.schedule == "model":
             return [i for _ in range(c.n_loop) for i in range(c.n_stored)]
+        if c.schedule == "ssmloop":
+            # hybrid only: attention blocks applied once, SSM blocks looped —
+            # don't loop the scarce resource
+            return [i for i in range(c.n_stored)
+                    for _ in range(1 if self.blocks[i].attn is not None
+                                   else c.n_loop)]
         raise ValueError(c.schedule)
 
     def forward(self, idx, targets=None):
