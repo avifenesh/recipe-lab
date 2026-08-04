@@ -74,11 +74,25 @@ For any looped/weight-tied architecture (Ouro-, Loopie-, looped-Mamba-class):
    rising on fresh. Loop's disadvantage is regime-dependent, as H5 claimed.
    No flip at 9.8 epochs; round 7 pushes to 39.
 
-8. **SSM inversion** (round 6, seed 7): looped+scaled SSM beats vanilla SSM
-   on fresh data at matched FLOPs — MC 5.1035 < MB 5.1156 < MA 5.1374, 24%
-   fewer params. First loop-beats-params result in the lab. ε gain 2.2× the
-   attention-mixer gain at N=2. Needs seeds + trajectory (round 8) before
-   the headline is trusted; N=4 inverted (MC4 > MB4), unexplained.
+7b. **Epoch-overfit robustness** (round 7, 39 epochs): the overfit cliff is
+   param-ordered — degradation past best val: A +1.069, C +0.520, E3 +0.283.
+   C−A final −0.535, crossover ≈13 epochs. Early-stop best still A by +0.014,
+   so the claim is *robustness*, not peak quality: loop+ε is a strong
+   epoch-regularizer wherever token budget exceeds the early-stop point.
+
+7c. **LR-grid capstone** (round 3c): all arms' optima at 2.4e-3; at optimum
+   the scaled arm beats unscaled at BOTH N (N=2 −0.030, N=4 −0.128); past-
+   optimum damage is ε-ordered (C +0.018 ≪ E3 +0.092 ≪ A +0.190 < B +0.243 <
+   E1 +0.281) — scaled looping has a wider LR basin than vanilla, unscaled a
+   narrower one. GPU-scale H2 confirmation. A@opt < C@opt: fresh-data verdict
+   not a tuning artifact.
+
+8. **SSM inversion: RETRACTED** (round 8 seed check). The round-6 seed-7
+   ordering (MC < MB < MA) does not survive seeds 13/29 — MC−MA sign flips
+   (−0.034/+0.048/−0.041), every arm wins one seed. SSM arms are 5-10×
+   noisier than attention arms here. Weak residual signal: MC best 3-seed
+   mean, never last. 20K-token-horizon MA-vs-MC single-seed trajectory
+   pending as a longer lever on the same question.
 
 ## Open (in flight)
 
