@@ -274,6 +274,31 @@ Findings:
   no free lunch from recurrence alone at this scale (consistent with rd 3).
 - Learnable λ: ±0.005, noise-level. Fixed λ=1 is fine; drop the H arms.
 
+### Round 6 results — SSM mixer (98M tokens, seed 7)
+
+| arm | desc | final val |
+|-----|------|-----------|
+| MA | vanilla SSM L12, 37.2M | 5.1374 |
+| MB | layer-loop 6×2 ε=1, 28.3M | 5.1156 |
+| MC | layer-loop 6×2 ε=1/N, 28.3M | **5.1035** |
+| MB4 | 3×4 ε=1, 23.8M | 5.1724 |
+| MC4 | 3×4 ε=1/N, 23.8M | 5.1792 |
+
+**The headline inversion: MC < MB < MA on fresh data.** The looped+scaled
+SSM beats vanilla SSM at matched FLOPs with 24% fewer params — exactly what
+attention arms could NOT do (C−A +0.0755 same protocol). ε gain at N=2 is
+2.2× the attention gain (+0.0121 vs +0.0055), as proof 5's
+correlation-compounding predicted. N=4 inverts (−0.0068, MC4 > MB4) —
+possibly the fp32-scan/eps interaction or small-N_state capacity; needs the
+seed check before interpreting. Round 8 queued: 3 seeds on MA/MB/MC,
+MB4/MC4 seed check, and 20K-step MA-vs-MC trajectory on fresh 500M — if the
+MC lead **grows** with tokens where attention's shrank, the scaling bet is
+recurrence-in-SSM, and the recipe has its home.
+
+Caveat before excitement: SSM absolute losses are ~0.7 worse than attention
+at this scale (custom minimal S6, no conv, single-head dt) — the win is
+*within-family*. Still the first sign of loop-beats-params on fresh data.
+
 ## Round-5 decision rule (pre-committed)
 
 Let g(t) = C−A val-loss gap at token count t from round 3.
