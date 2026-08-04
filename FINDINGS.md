@@ -90,12 +90,31 @@ For any looped/weight-tied architecture (Ouro-, Loopie-, looped-Mamba-class):
 8. **SSM inversion: RETRACTED** (round 8 seed check). The round-6 seed-7
    ordering (MC < MB < MA) does not survive seeds 13/29 — MC−MA sign flips
    (−0.034/+0.048/−0.041), every arm wins one seed. SSM arms are 5-10×
-   noisier than attention arms here. Weak residual signal: MC best 3-seed
-   mean, never last. 20K-token-horizon MA-vs-MC single-seed trajectory
-   pending as a longer lever on the same question.
+   noisier than attention arms here. The 490M-token trajectory settles it:
+   MC−MA grows to +0.125 @197M then plateaus at +0.108 @491M — vanilla SSM
+   wins on fresh data at long horizon, same as attention. No loop-beats-
+   params anywhere in this testbed on fresh data. The ε=1/N gain within
+   looped SSMs stands (proof 5 + MC's 3-seed mean edge over MB).
 
-## Open (in flight)
+## Campaign complete — final verdict
 
-- Round 3c: unscaled stability edge; 4000-step rankings at 1.2e-3.
-- Round 7: 39-epoch H7 — does C−A flip negative?
-- Round 8: SSM result seed-stability + fresh-data trajectory MA vs MC.
+Eight GPU rounds + five numerical proofs, all pre-registered, one retraction
+correctly caught by our own protocol. The proven, scale-ready recipe:
+
+**For any weight-tied/looped architecture (attention or SSM mixers):**
+1. Scale shared residual branches by ε = λ/(N√L), λ=1 (learnable λ = noise).
+   Val-loss gain over unscaled = 0.0122·(N−1) at 98M tokens; at optimal LR
+   the gain holds at every N (N=2 −0.030, N=4 −0.128).
+2. Tune LR once at N=1; it transfers. Scaled arms hold a ≥2×-wide flat LR
+   basin (past-optimum damage +0.018 vs vanilla +0.190, unscaled-loop +0.28).
+3. In multi-epoch/data-constrained training, loop+ε cuts overfit degradation
+   2-4× vs param-matched-FLOPs vanilla (crossover ≈13 epochs; final gap
+   −0.535 at 39 epochs). Regularization for the data-wall era.
+4. Do NOT loop to beat a FLOPs-matched vanilla model on fresh single-epoch
+   data below multi-B-token scale — refuted at every N, both mixers, all LRs
+   tested. Loopie-style crossovers live at 100-1000× this compute.
+
+What's worth scaling next (owner's call): the 39-epoch robustness result at
+10× params/tokens — if the param-ordered overfit cliff holds at 300M+ params,
+this is a pretraining-recipe paper; the ε+LR-transfer package is the
+methods half, already fully evidenced at this scale.
