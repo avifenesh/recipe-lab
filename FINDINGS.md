@@ -66,8 +66,22 @@ For any looped/weight-tied architecture (Ouro-, Loopie-, looped-Mamba-class):
   data-constrained training (round 5 pending), or reasoning-depth effects not
   measured by val loss.
 
+## New since round 4
+
+7. **Data-constrained direction** (round 5): repeat tax at 9.8 epochs is
+   monotone in param count (A +0.1326 > C +0.1017 > E3 +0.0974) and the C−A
+   gap falls with tokens on repeated data (+0.053@10K→+0.045@20K) while
+   rising on fresh. Loop's disadvantage is regime-dependent, as H5 claimed.
+   No flip at 9.8 epochs; round 7 pushes to 39.
+
+8. **SSM inversion** (round 6, seed 7): looped+scaled SSM beats vanilla SSM
+   on fresh data at matched FLOPs — MC 5.1035 < MB 5.1156 < MA 5.1374, 24%
+   fewer params. First loop-beats-params result in the lab. ε gain 2.2× the
+   attention-mixer gain at N=2. Needs seeds + trajectory (round 8) before
+   the headline is trusted; N=4 inverted (MC4 > MB4), unexplained.
+
 ## Open (in flight)
 
-- Round 5: does the C−A gap collapse/flip at ~10 epochs over 50M tokens?
-- Round 6: SSM-mixer ε gains ≥ attention ε gains at same N?
-- Round 3c: where is the unscaled stability edge; rankings at optimal LR.
+- Round 3c: unscaled stability edge; 4000-step rankings at 1.2e-3.
+- Round 7: 39-epoch H7 — does C−A flip negative?
+- Round 8: SSM result seed-stability + fresh-data trajectory MA vs MC.
