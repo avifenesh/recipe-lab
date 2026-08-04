@@ -202,6 +202,26 @@ rule: pivot. Two live threads —
    at this epoch count would be a strong result, expect it only if A's val
    curve visibly turns up.
 
+### Round 5 results — H5 CONFIRMED (direction), 9.8 epochs
+
+| arm | repeated | fresh | repeat tax |
+|-----|----------|-------|-----------|
+| A (40.6M) | 3.9812 | 3.8486 | **+0.1326** |
+| C (30.0M) | 4.0258 | 3.9241 | +0.1017 |
+| E3 (24.6M) | 4.1015 | 4.0041 | **+0.0974** |
+
+- Repeat tax is **monotone in param count**, exactly as predicted: fewer
+  stored params + more compute/token = less memorization pressure.
+- C−A gap: fresh +0.0755 → repeated **+0.0446** (41% smaller); C−A gap
+  *peaked mid-run and was falling* (+0.0530 @10K → +0.0446 @20K) while on
+  fresh data it was still rising. E3−A: +0.1555 → +0.1203.
+- No flip at 9.8 epochs (as pre-registered — A never turned up; min val at
+  step 19250). Extrapolation: tax grows with epochs; the flip regime is
+  higher epoch count and/or param-matched-at-larger-scale.
+- **Trajectory flip test**: on repeated data the looped arm is *converging
+  toward* vanilla with tokens; on fresh data it *diverges*. That is the
+  regime-dependence H5 claimed.
+
 ## Queue on box (serial, 2026-08-03 evening)
 
 1. **Round 3** — long A/C/E3, 20K steps / 490M tokens: crossover trajectory.
