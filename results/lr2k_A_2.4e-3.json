@@ -1,0 +1,94 @@
+{
+ "arm": "A",
+ "seed": 7,
+ "params": 40611072,
+ "config": {
+  "arm": "A",
+  "steps": 2000,
+  "batch_size": 24,
+  "block_size": 1024,
+  "lr": 0.0024,
+  "warmup": 200,
+  "seed": 7,
+  "data": "data/fineweb_train.bin",
+  "val_data": "data/fineweb_val.bin",
+  "eval_every": 250,
+  "out": "results/lr2k_A_2.4e-3.json"
+ },
+ "curve": [
+  {
+   "step": 0,
+   "tokens": 0,
+   "train_loss": 10.8767,
+   "val_loss": 10.6482,
+   "gnorm": 14.134,
+   "sec": 2.7
+  },
+  {
+   "step": 250,
+   "tokens": 6144000,
+   "train_loss": 6.3618,
+   "val_loss": 6.3575,
+   "gnorm": 0.394,
+   "sec": 39.3
+  },
+  {
+   "step": 500,
+   "tokens": 12288000,
+   "train_loss": 5.7439,
+   "val_loss": 5.8524,
+   "gnorm": 0.381,
+   "sec": 76.0
+  },
+  {
+   "step": 750,
+   "tokens": 18432000,
+   "train_loss": 5.404,
+   "val_loss": 5.4611,
+   "gnorm": 0.41,
+   "sec": 112.7
+  },
+  {
+   "step": 1000,
+   "tokens": 24576000,
+   "train_loss": 5.0304,
+   "val_loss": 5.1583,
+   "gnorm": 0.339,
+   "sec": 149.4
+  },
+  {
+   "step": 1250,
+   "tokens": 30720000,
+   "train_loss": 5.0056,
+   "val_loss": 4.9062,
+   "gnorm": 0.433,
+   "sec": 186.0
+  },
+  {
+   "step": 1500,
+   "tokens": 36864000,
+   "train_loss": 4.6557,
+   "val_loss": 4.7455,
+   "gnorm": 0.418,
+   "sec": 222.7
+  },
+  {
+   "step": 1750,
+   "tokens": 43008000,
+   "train_loss": 4.6097,
+   "val_loss": 4.6393,
+   "gnorm": 0.362,
+   "sec": 259.4
+  },
+  {
+   "step": 1999,
+   "tokens": 49127424,
+   "train_loss": 4.4445,
+   "val_loss": 4.5825,
+   "gnorm": 0.402,
+   "sec": 296.0
+  }
+ ],
+ "final_val": 4.5825,
+ "wall_sec": 296.0
+}
