@@ -78,6 +78,19 @@ ARMS = {
                  d_model=768, n_head=12),
     "C768": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
                  d_model=768, n_head=12),
+    # Hybrid arms (round 11): attention at stored block 0 (+6 for vanilla),
+    # SSM elsewhere. Both execute 2 attn + 10 ssm applications per token:
+    # vanilla-12 has attn at blocks 0 and 6; looped-6x2 loops block 0 twice.
+    # Same data-constrained d=768 protocol where the attention flip lives.
+    "HA768": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+                  d_model=768, n_head=12, mixer="hybrid", attn_every=6),
+    "HC768": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                  d_model=768, n_head=12, mixer="hybrid", attn_every=6),
+    # Pure-SSM d=768 pair (conv-upgraded mixer)
+    "MA768": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+                  d_model=768, n_head=12, mixer="ssm"),
+    "MC768": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                  d_model=768, n_head=12, mixer="ssm"),
 }
 
 

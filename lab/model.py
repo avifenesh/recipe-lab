@@ -32,8 +32,9 @@ class GPTConfig:
     schedule: str = "vanilla"  # vanilla | layer | model
     res_scale: float = 1.0
     learn_lambda: bool = False  # per-block learnable multiplier on res_scale
-    mixer: str = "attn"  # attn | ssm (selective scan, Mamba-style)
-    d_state: int = 16    # SSM state size (mixer="ssm" only)
+    mixer: str = "attn"  # attn | ssm (selective scan, Mamba-style) | hybrid
+    attn_every: int = 6  # hybrid: stored block i is attention iff i % attn_every == 0
+    d_state: int = 16    # SSM state size (mixer="ssm"/"hybrid")
     dropout: float = 0.0
 
 
@@ -44,6 +45,8 @@ class SelectiveSSM(nn.Module):
     def __init__(self, cfg: GPTConfig):
         super().__init__()
         d, ds = cfg.d_model, cfg.d_state
+        # depthwise causal conv before selection, as in Mamba (d_conv=4)
+        self.conv = nn.Conv1d(d, d, kernel_size=4, padding=3, groups=d)
         self.W_dt = nn.Linear(d, 1)
         self.a_log = nn.Parameter(torch.zeros(ds))
         self.B = nn.Linear(d, ds, bias=False)
@@ -55,22 +58,24 @@ class SelectiveSSM(nn.Module):
     def forward(self, x):
         # x: (B, T, D). s_t = exp(decay_t) s_{t-1} + u_t, causal by cumsum.
         # Scan runs in fp32: u/P spans up to e^30, far past bf16 range.
-        dt = F.softplus(self.W_dt(x)).float()              # (B, T, 1)
+        T = x.shape[1]
+        xc = F.silu(self.conv(x.transpose(1, 2))[..., :T].transpose(1, 2))
+        dt = F.softplus(self.W_dt(xc)).float()             # (B, T, 1)
         decay = -F.softplus(self.a_log.float())[None, None] * dt
-        u = dt * self.B(x).float()                         # (B, T, ds)
+        u = dt * self.B(xc).float()                        # (B, T, ds)
         logP = decay.cumsum(dim=1).clamp(min=-30.0)        # running log-decay
         P = logP.exp()
         s = P * (u / P).cumsum(dim=1)
-        y = self.C(s.to(x.dtype)) + x * self.D
+        y = self.C(s.to(x.dtype)) + xc * self.D
         return self.out(y * F.silu(self.gate(x)))
 
 
 class Block(nn.Module):
-    def __init__(self, cfg: GPTConfig):
+    def __init__(self, cfg: GPTConfig, use_attn: bool = True):
         super().__init__()
         d = cfg.d_model
         self.ln1 = nn.LayerNorm(d)
-        if cfg.mixer == "ssm":
+        if not use_attn:
             self.attn = None
             self.ssm = SelectiveSSM(cfg)
         else:
@@ -104,7 +109,15 @@ class GPT(nn.Module):
         self.cfg = cfg
         self.tok_emb = nn.Embedding(cfg.vocab_size, cfg.d_model)
         self.pos_emb = nn.Embedding(cfg.block_size, cfg.d_model)
-        self.blocks = nn.ModuleList(Block(cfg) for _ in range(cfg.n_stored))
+
+        def block_is_attn(i: int) -> bool:
+            if cfg.mixer == "attn":
+                return True
+            if cfg.mixer == "ssm":
+                return False
+            return i % cfg.attn_every == 0  # hybrid
+        self.blocks = nn.ModuleList(Block(cfg, use_attn=block_is_attn(i))
+                                    for i in range(cfg.n_stored))
         self.ln_f = nn.LayerNorm(cfg.d_model)
         self.head = nn.Linear(cfg.d_model, cfg.vocab_size, bias=False)
         self.head.weight = self.tok_emb.weight  # tied
