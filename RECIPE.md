@@ -308,20 +308,18 @@ All optima interior at 2.4e-3. Three GPU-scale confirmations:
 | MB4 | 3×4 ε=1, 23.8M | 5.1724 |
 | MC4 | 3×4 ε=1/N, 23.8M | 5.1792 |
 
-**The headline inversion: MC < MB < MA on fresh data.** The looped+scaled
-SSM beats vanilla SSM at matched FLOPs with 24% fewer params — exactly what
-attention arms could NOT do (C−A +0.0755 same protocol). ε gain at N=2 is
-2.2× the attention gain (+0.0121 vs +0.0055), as proof 5's
-correlation-compounding predicted. N=4 inverts (−0.0068, MC4 > MB4) —
-possibly the fp32-scan/eps interaction or small-N_state capacity; needs the
-seed check before interpreting. Round 8 queued: 3 seeds on MA/MB/MC,
-MB4/MC4 seed check, and 20K-step MA-vs-MC trajectory on fresh 500M — if the
-MC lead **grows** with tokens where attention's shrank, the scaling bet is
-recurrence-in-SSM, and the recipe has its home.
+~~The headline inversion: MC < MB < MA on fresh data.~~ **KILLED by round-8
+seed check.** Per-seed orderings: s7 MC<MB<MA, s13 MA<MC<MB, s29 MB<MC<MA —
+every arm wins one seed. MC−MA = −0.034/+0.048/−0.041, mean −0.009, sign
+unstable. SSM arms are ~5-10× noisier across seeds than attention arms
+(whose C−B was −0.0055/−0.0079/−0.0099, sign-stable). The seed-7 result was
+noise wearing a headline. What survives: MC has the best 3-seed mean
+(5.0896 vs MA 5.0986, MB 5.0998) and is never last — consistent with a small
+real effect drowned in variance; n=3 cannot certify it. The 20K-step MA-vs-MC
+trajectory (still queued) gives 5× tokens of signal on one seed.
 
-Caveat before excitement: SSM absolute losses are ~0.7 worse than attention
-at this scale (custom minimal S6, no conv, single-head dt) — the win is
-*within-family*. Still the first sign of loop-beats-params on fresh data.
+Lesson enforced: pre-registered "verify before believing" caught it — no
+single-seed result from this testbed gets promoted again.
 
 ### Round 7 results — 39 epochs (12.5M unique tokens × 20K steps)
 
