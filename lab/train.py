@@ -73,6 +73,11 @@ ARMS = {
                 mixer="ssm"),
     "MC4": dict(n_stored=3, n_loop=4, schedule="layer", res_scale=0.25,
                 mixer="ssm"),
+    # Scale-validation arms: 4x FLOPs (d=768). Same 12 applications/token.
+    "A768": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+                 d_model=768, n_head=12),
+    "C768": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                 d_model=768, n_head=12),
 }
 
 
