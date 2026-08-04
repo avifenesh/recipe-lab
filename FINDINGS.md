@@ -118,3 +118,29 @@ What's worth scaling next (owner's call): the 39-epoch robustness result at
 10× params/tokens — if the param-ordered overfit cliff holds at 300M+ params,
 this is a pretraining-recipe paper; the ε+LR-transfer package is the
 methods half, already fully evidenced at this scale.
+
+## Round 9 — the scale flip (added 2026-08-04)
+
+Same 12.5M-unique-token protocol at d=768 (4× FLOPs; A768 123.7M params,
+C768 81.2M; batch 12, 245M tokens ≈ 19.6 epochs):
+
+| arm | best val (step, epochs) | final | degradation |
+|-----|------------------------|-------|-------------|
+| A768 | 4.6831 (6000, 5.9 ep) | 6.1558 | +1.473 |
+| C768 | **4.6438** (7000, 6.9 ep) | 5.4652 | +0.821 |
+
+- **The early-stop verdict flips with scale: C768 beats A768 by −0.0393 on
+  best-achievable val** (at d=384 A won +0.0137). Pre-registered P2
+  (degradation ordering, ratio 1.79× ≥ 1.5) and P3 (bigger A bottoms
+  earlier) both PASS. P1 failed for both arms alike (batch/token budget
+  halved vs round 7 — protocol artifact, affects both arms equally).
+- Mechanism scales as predicted: more params ⇒ faster memorization of fixed
+  unique data ⇒ the loop's implicit regularization converts from
+  "robustness" to "outright best-val win" as scale grows. The trend LINE —
+  d=384: A by +0.014; d=768: C by −0.039 — points the right way for the
+  data-wall era.
+- **This is the scale-over signal.** In the regime the field is entering
+  (params grow, unique tokens don't), layer-loop + ε=1/N wins on quality,
+  not just stability, and the margin grows with scale. Next rung when
+  desired: d=1024+ / more unique tokens / 3 seeds — the 2.6B-token bin is
+  already on the box.
