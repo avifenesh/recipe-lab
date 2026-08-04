@@ -91,6 +91,12 @@ ARMS = {
                   d_model=768, n_head=12, mixer="ssm"),
     "MC768": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
                   d_model=768, n_head=12, mixer="ssm"),
+    # HD: model-loop hybrid. Layer-loop concentrates both attention passes at
+    # consecutive applications (HC768 failed +0.28 vs HA768); model-loop of
+    # L0..L5 puts attention at applications 0 and 6 — exact placement match
+    # to HA768. Placement dominates schedule for hybrids.
+    "HD768": dict(n_stored=6, n_loop=2, schedule="model", res_scale=0.5,
+                  d_model=768, n_head=12, mixer="hybrid", attn_every=6),
 }
 
 

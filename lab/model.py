@@ -33,7 +33,8 @@ class GPTConfig:
     res_scale: float = 1.0
     learn_lambda: bool = False  # per-block learnable multiplier on res_scale
     mixer: str = "attn"  # attn | ssm (selective scan, Mamba-style) | hybrid
-    attn_every: int = 6  # hybrid: stored block i is attention iff i % attn_every == 0
+    attn_every: int = 6  # hybrid: block i is attention iff i % attn_every == attn_offset
+    attn_offset: int = 0
     d_state: int = 16    # SSM state size (mixer="ssm"/"hybrid")
     dropout: float = 0.0
 
@@ -115,7 +116,7 @@ class GPT(nn.Module):
                 return True
             if cfg.mixer == "ssm":
                 return False
-            return i % cfg.attn_every == 0  # hybrid
+            return i % cfg.attn_every == cfg.attn_offset  # hybrid
         self.blocks = nn.ModuleList(Block(cfg, use_attn=block_is_attn(i))
                                     for i in range(cfg.n_stored))
         self.ln_f = nn.LayerNorm(cfg.d_model)
