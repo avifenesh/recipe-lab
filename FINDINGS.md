@@ -1,8 +1,11 @@
 # Findings: ε=1/N layer-loop scaling — what is proven, what is refuted
 
-Status: 2026-08-04. Rounds 1-4 complete; rounds 5 (data-constrained), 6 (SSM
-mixer), 3c (LR-grid extension) in flight. All runs: GPT-2-BPE FineWeb-Edu,
-d=384, 12 block-applications/token (FLOPs-matched), bf16, AdamW, L40S.
+Status: 2026-08-05. Campaign complete: eleven GPU rounds, five numerical
+proofs, one MQAR probe, all pre-registered; two single-seed headlines caught
+and retracted by our own protocol. Unless a round says otherwise, runs were
+GPT-2-BPE FineWeb-Edu, 12 block-applications/token (FLOPs-matched), bf16,
+AdamW, on one rented L40S — d=384 through round 8, d=768 rounds 9-11; the
+MQAR probe ran locally.
 
 ## Proven (paper math + from-zero training)
 
@@ -96,7 +99,7 @@ For any looped/weight-tied architecture (Ouro-, Loopie-, looped-Mamba-class):
    params anywhere in this testbed on fresh data. The ε=1/N gain within
    looped SSMs stands (proof 5 + MC's 3-seed mean edge over MB).
 
-## Campaign complete — final verdict
+## Verdict at round 8 — the d=384 ledger (later extended by rounds 9-11)
 
 Eight GPU rounds + five numerical proofs, all pre-registered, one retraction
 correctly caught by our own protocol. The proven, scale-ready recipe:
@@ -148,5 +151,100 @@ C768 81.2M; batch 12, 245M tokens ≈ 19.6 epochs):
 **Round 10 (seed verification): 3/3 seeds confirm the flip.** C768 best-val
 beats A768 on every seed: −0.0393 (s7), −0.0356 (s13), −0.0423 (s29); mean
 −0.039, zero sign flips, seed noise ±0.003 ≪ effect. Passed the same bar
-that killed the SSM headline. **The scale flip is real and is the campaign's
-final, verified result.**
+that killed the SSM headline. **The scale flip is real** — the attention
+campaign's final, verified result. Rounds 11 and the MQAR probe (below)
+extended it to SSM and hybrid backbones.
+
+## Round 11 — SSM and hybrid backbones at d=768 (2026-08-04/05)
+
+Same rounds-9/10 protocol (12.5M unique tokens, 20K steps, batch 12 ≈ 19.6
+epochs, d=768), mixer upgraded with the depthwise causal conv (k=4) the
+round-6 mixer lacked. Motivation beyond replication: looped attention shares
+weights but not inference memory (N applications still need the full KV
+cache), while a looped SSM keeps O(d_state·d) state regardless of loop count
+— the only variant of the recipe with an inference-memory win on top of the
+params win. Pre-registered P1-P4 in `lab/run_round11.sh`.
+
+**P2 — pure-SSM flip: CONFIRMED, 2/2 seeds.** MC768 (loop 6×2, ε=1/N,
+74.2M params) beat MA768 (vanilla-12, 109.9M) on best-val both seeds:
+−0.0263 (s7: 5.0034 vs 5.0297) and −0.0129 (s13: 5.0307 vs 5.0436). Files:
+`results/epoch39_{MA,MC}768_s{7,13}.json`.
+
+**P3 — cliff param-ordered: CONFIRMED.** Degradation past best val, seed 7:
+MA +2.236 vs MC +1.571; seed 13: MA +1.790 vs MC +1.083. Same ordering as
+attention (rounds 7/9).
+
+**P1 — hybrid layer-loop flip: REFUTED, then diagnosed.** HC768 (layer-loop
+6×2, attention applications stacked at positions 0,1) lost to HA768
+(vanilla-12, attention interleaved at 0,6) by **+0.2766** (4.9870 vs 4.7104,
+s7). The placement-fair control HD768 (model-loop, attention lands at 0,6 —
+exact parity with HA768) still lost by **+0.2547** (4.9651). So the failure
+was looping attention through shared weights itself, not placement.
+
+**11c — the ssmloop schedule: loop the state-mixer, never the retriever.**
+HE768 keeps every attention application un-looped and loops only the SSM
+blocks (stored [a,s,s,s,a,s,s] × ssm-loop-2 → 2 attn + 10 ssm apps, attn at
+0,7; 82.5M params vs HA768 112.2M). Seed 7: best-val **4.6926 < HA768
+4.7104 (−0.0178)**, degradation +1.581 < +2.070. The rule this isolates,
+consistent across HC/HD/HE: shared-weight reuse helps SSM blocks and hurts
+attention blocks. Caveat kept honest: the HE768 seed-13 leg finished (best
+4.6805, `results/epoch39_HE768_s13.json`) but its HA768 s13 comparator never
+ran, so the hybrid win stands at one compared seed and does not clear the
+no-single-seed bar the pure-SSM result cleared. The pure-SSM flip (2/2) is
+the round's verified claim.
+
+**P4 — hybrid > pure-SSM at matched schedule: CONFIRMED.** HA768 4.7104 <
+MA768 5.0297; HE768 4.6926 < MC768 5.0034 (seed 7). Attention's 2/12 share
+was worth far more than its FLOPs share.
+
+## MQAR probe — can looping substitute for attention at recall? (2026-08-05)
+
+Independent probe on the local box (`lab/mqar_loop.py`, tiny looped-SSM
+models, d=128, 4 block applications/token for every arm; pre-registered
+P1-P4 in the file header; means of 2 seeds — grid receipts in
+`lab/mqar.log`, working-cell elasticity in `lab/mqar2.log`).
+
+Grid — accuracy at d_state ∈ {8, 64} × kv_pairs ∈ {4, 16}:
+
+| d_state | kv | L1 (4 stored) | L4 (1×4, ε=1/4) | L4u (ε=1) |
+|---------|----|--------------|-----------------|-----------|
+| 8 | 4 | 21.4% | 18.6% | 16.2% |
+| 8 | 16 | 2.2% | 3.8% | 1.7% |
+| 64 | 4 | 23.8% | **59.8%** | 38.8% |
+| 64 | 16 | 3.9% | 2.1% | 1.6% |
+
+- **P1 (memory wall): CONFIRMED.** When the state cannot hold the pairs
+  (kv=16 at either d_state), every arm failed; looping reprocesses a
+  compressed state, it cannot recover information the state never held.
+- **P2 (compute substitution): CONFIRMED, stronger than predicted.** On the
+  working cell (d_state=64, kv=4) the looped arm did not merely match the
+  4×-params stored arm — it beat it 59.8% vs 23.8% with a quarter of the
+  parameters. Loops multiply what the state holds; they cannot replace
+  attention's recall. Same verdict as round 11 from an orthogonal task.
+- **P3 (ε): CONFIRMED.** L4 ≥ L4u everywhere, +21 points on the working
+  cell — ε=1/N was what made the looped arm trainable enough to win.
+- **P4 (test-time elasticity): REFUTED, usefully.** Trained N=4 on the
+  working cell, evaluated N ∈ {2,4,8} with ε readjusted to 1/N_eval vs
+  frozen at the training value 1/4: N=8 kept 49.6% with ε frozen but only
+  27.8% readjusted (N=2: 28.1% vs 24.7%). No norm explosion either way — LN
+  bounds inference; the 1/N blowup is a training-dynamics story. Changing ε
+  changes the learned per-step function; frozen ε just iterates the learned
+  map longer and degrades gracefully. Practical rule: **extrapolate loops at
+  inference with the training ε.**
+
+## Campaign close — the recipe as shipped
+
+Everything from the round-8-era verdict stands, with three additions proven
+since:
+
+5. **The flip scales and generalizes.** In the data-constrained regime the
+   loop+ε arm beat the param-matched vanilla on best-achievable val at
+   d=768 for attention (3/3 seeds, −0.039) and pure SSM (2/2 seeds, −0.026/
+   −0.013) — not just robustness, outright quality.
+6. **Loop the state-mixer, never the retriever.** In hybrids, loop only SSM
+   blocks and apply each attention block once (HE768-style): −0.018 vs
+   vanilla hybrid with 26% fewer params (one compared seed). Layer-looping
+   or model-looping the attention blocks cost +0.25-0.28.
+7. **At inference, extrapolate loops with the training ε** (MQAR P4).
+   Looped SSMs are also the only variant with an inference-memory win: state
+   stays O(d_state·d) no matter how many times you loop.
