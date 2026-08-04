@@ -255,6 +255,27 @@ Findings:
    param-deficit story is LR-sensitive; short-horizon near-parity at higher
    LR means round-3's 6e-4 verdict is not the final word on H1(c).
 
+### Round 3c results — full 5-point LR grid (2000 steps, seed 7)
+
+| arm | 3e-4 | 6e-4 | 1.2e-3 | 2.4e-3 | 4.8e-3 | 2.4→4.8 damage |
+|-----|------|------|--------|--------|--------|----------------|
+| A (N=1) | 5.3998 | 5.0222 | 4.7608 | **4.5825** | 4.7723 | +0.190 |
+| B (N=2, ε=1) | 5.4289 | 5.0949 | 4.7588 | **4.6452** | 4.8878 | +0.243 |
+| C (N=2, ε=1/N) | 5.4109 | 5.0836 | 4.7681 | **4.6151** | 4.6328 | **+0.018** |
+| E1 (N=4, ε=1) | 5.4786 | 5.1515 | 4.9175 | **4.8110** | 5.0924 | +0.281 |
+| E3 (N=4, ε=1/N) | 5.4397 | 5.0623 | 4.7972 | **4.6826** | 4.7744 | +0.092 |
+
+All optima interior at 2.4e-3. Three GPU-scale confirmations:
+1. **N=2 verdict flips at optimum: C@opt 4.6151 < B@opt 4.6452 (−0.030).**
+   The 1.2e-3 "+0.009 B wins" was censoring; at proper LR the ε fix wins at
+   every N. Re-parameterization objection dead at both N.
+2. **H2 LR robustness on GPU**: past-optimum damage ordering is exactly
+   ε-ordered — C +0.018 ≪ E3 +0.092 ≪ A +0.190 < B +0.243 < E1 +0.281.
+   Scaled arms have a wide flat LR basin (C effectively flat over a 2×
+   range); unscaled looped arms are the most LR-fragile, worse than vanilla.
+3. **A@opt still < C@opt on fresh data** (4.5825 vs 4.6151): H1(c) verdict
+   unchanged by LR — param deficit is real, not a tuning artifact.
+
 ### Round 4 results (N-sweep + learnable λ, 98M tokens, seed 7)
 
 | N | stored | unscaled | ε=1/N | ε gain |
