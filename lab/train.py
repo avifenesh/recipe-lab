@@ -105,6 +105,13 @@ ARMS = {
     # 5 ssm stored vs HA768's 2+10 — halves SSM storage only.
     "HE768": dict(n_stored=7, n_loop=2, schedule="ssmloop", res_scale=0.5,
                   d_model=768, n_head=12, mixer="hybrid", attn_every=4),
+    # Third scale point (round 12): d=1024, ~1.8x FLOPs over d=768. Flip
+    # margin grew d=384 (+0.014, vanilla) -> d=768 (-0.039, loop); prediction
+    # is monotone growth.
+    "A1024": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+                  d_model=1024, n_head=16),
+    "C1024": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                  d_model=1024, n_head=16),
 }
 
 
@@ -146,6 +153,8 @@ def main():
     ap.add_argument("--val-data", default="data/fineweb_val.bin")
     ap.add_argument("--eval-every", type=int, default=250)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--save-ckpt", default=None,
+                    help="path to save best-val state_dict (for downstream eval)")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -179,6 +188,7 @@ def main():
            "config": vars(args), "curve": []}
     t0 = time.time()
     tokens_per_step = args.batch_size * args.block_size
+    best_val = float("inf")
 
     for step in range(args.steps):
         for g in opt.param_groups:
@@ -199,6 +209,10 @@ def main():
                    "gnorm": round(float(gnorm), 3), "sec": round(elapsed, 1)}
             log["curve"].append(rec)
             print(rec, flush=True)
+            if args.save_ckpt and val < best_val:
+                best_val = val
+                torch.save({"model": model.state_dict(), "arm": args.arm,
+                            "step": step, "val_loss": val}, args.save_ckpt)
 
     log["final_val"] = log["curve"][-1]["val_loss"]
     log["wall_sec"] = round(time.time() - t0, 1)
