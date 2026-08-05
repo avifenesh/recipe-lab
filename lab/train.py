@@ -112,6 +112,13 @@ ARMS = {
                   d_model=1024, n_head=16),
     "C1024": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
                   d_model=1024, n_head=16),
+    # 0.4B de-risk rung (round 13, SPEC_1B gate): 4th scale point AND the
+    # realism axis — 100M unique tokens x 8 epochs (params/unique 4.2 vs 16
+    # at d=1024; epochs 8 vs 19.6). Flip failing here cancels the 1B run.
+    "A1536": dict(n_stored=12, n_loop=1, schedule="vanilla", res_scale=1.0,
+                  d_model=1536, n_head=24),
+    "C1536": dict(n_stored=6, n_loop=2, schedule="layer", res_scale=0.5,
+                  d_model=1536, n_head=24),
 }
 
 
