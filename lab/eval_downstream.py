@@ -107,8 +107,10 @@ def main():
                 lambda r: [" " + e for e in r["endings"]],
                 lambda r: int(r["label"]))
         elif task == "piqa":
-            ds = load_dataset("ybisk/piqa", split="validation",
-                              trust_remote_code=True)
+            # ybisk/piqa main branch is a loader script (unsupported by
+            # datasets>=3); read the auto-converted parquet branch instead
+            ds = load_dataset("parquet", split="validation", data_files={
+                "validation": "https://huggingface.co/datasets/ybisk/piqa/resolve/refs%2Fconvert%2Fparquet/plain_text/validation/0000.parquet"})
             rows = ds.select(range(min(args.limit, len(ds))))
             acc = eval_multiple_choice(
                 model, cfg, rows,

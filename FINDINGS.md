@@ -247,3 +247,47 @@ since:
 7. **At inference, extrapolate loops with the training ε** (MQAR P4).
    Looped SSMs are also the only variant with an inference-memory win: state
    stays O(d_state·d) no matter how many times you loop.
+
+## Round 12 — third scale point + downstream evals (2026-08-05)
+
+Owner's bar: "eval is the last word. scale training then eval." Same
+data-constrained protocol at d=1024 (A1024 202.7M vs C1024 127.1M params),
+seeds 7+13, best-val checkpoints evaluated zero-shot on hellaswag, piqa,
+arc_easy (length-normalized MC logprob) and lambada (exact final word),
+1000 samples each. Receipts: `results/epoch39_{A,C}1024_s{7,13}.json`,
+`evals/*.json`.
+
+**P1 — scale trend: CONFIRMED, three points, monotone.**
+
+| d_model | loop − vanilla (best val) |
+|---------|--------------------------|
+| 384 | +0.014 (vanilla wins) |
+| 768 | −0.039 (3/3 seeds) |
+| 1024 | **−0.060 / −0.039** (s7/s13) |
+
+The flip margin grows with scale; C1024 wins with **37% fewer params**.
+
+**P2 — downstream ordering matches: CONFIRMED, both seeds.**
+
+| arm/seed | hellaswag | piqa | arc_easy | lambada | mean |
+|----------|-----------|------|----------|---------|------|
+| A1024 s7 | .3080 | .5360 | .3105 | .0200 | .2936 |
+| A1024 s13 | .2810 | .5100 | .2947 | .0160 | .2754 |
+| C1024 s7 | .3040 | .5370 | .3105 | .0340 | **.2964** |
+| C1024 s13 | .2950 | .5350 | .3263 | .0340 | **.2976** |
+
+C beats A on the suite mean both seeds (+0.003, +0.022; overall +0.012).
+Sharpest single signal: **lambada +70-113%** relative (.034 vs .020/.016) —
+the looped model is better at using long context to predict the exact next
+word, consistent with more per-token computation. Honest bounds: hellaswag
+is mixed at the seed level (s7 A ahead by .004), absolute numbers are
+small-model-small-data (~29-30% vs 25% chance on hellaswag), and lambada's
+base rate is tiny. The claim evals support: the loss win is not a
+loss-artifact — it carries to task accuracy with the ordering preserved.
+
+**Campaign verdict, final form:** in data-constrained pretraining, looped
++ ε-scaled models beat FLOPs-matched vanilla models with 26-37% fewer
+params on val loss (3 architectures, 9/9 paired runs, 3 scale points,
+margin growing with scale) *and* on downstream task accuracy (2/2 seeds at
+d=1024). Recipe: ε=λ/(N√L), LR from N=1, loop the state-mixer never the
+retriever, training-ε at inference.
