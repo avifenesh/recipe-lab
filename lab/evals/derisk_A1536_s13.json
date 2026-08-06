@@ -1,0 +1,10 @@
+{
+ "ckpt": "ckpts/derisk_A1536_s13.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.326,
+  "piqa": 0.593,
+  "arc_easy": 0.3509,
+  "lambada": 0.103
+ }
+}

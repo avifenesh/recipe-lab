@@ -291,3 +291,37 @@ params on val loss (3 architectures, 9/9 paired runs, 3 scale points,
 margin growing with scale) *and* on downstream task accuracy (2/2 seeds at
 d=1024). Recipe: ε=λ/(N√L), LR from N=1, loop the state-mixer never the
 retriever, training-ε at inference.
+
+## Round 13 — the 0.4B realism rung: SPEC_1B gate OPEN (2026-08-06)
+
+The de-risk experiment moved both knobs toward production at once:
+A1536 (417M params) vs C1536 (247M, loop 6×2 ε=0.5), **100M unique tokens ×
+8 epochs** — params/unique ratio 4.2 (vs 16 at d=1024), epochs 8 (vs ~20).
+Less repetition = less memorization pressure = the conservative direction.
+Receipts: `results/derisk_*`, `evals/derisk_*`.
+
+| seed | A1536 best (epoch) | C1536 best (epoch) | gap |
+|------|--------------------|--------------------|-----|
+| 7 | 3.7786 (6.6 ep) | **3.7263** (7.8 ep) | **−0.0523** |
+| 13 | 3.7723 (6.4 ep) | **3.7285** (8.0 ep) | **−0.0438** |
+
+All three pre-registered bars PASS:
+- **P1** flip both seeds (−0.052, −0.044).
+- **P2** mean gap −0.048 ≤ −0.02 (cleared 2.4×) — the campaign's largest
+  margin, on its *gentlest* repetition regime.
+- **P3** eval-suite ordering matches both seeds (+0.002, +0.012 mean;
+  absolute scores now clearly above chance: piqa .58-.60, arc_easy .35-.40,
+  hellaswag .33, lambada .10).
+
+Dynamics note: vanilla bottomed at ~6.5 epochs and turned up (+0.03-0.04
+degradation); the looped arm was still descending at the 8-epoch budget end
+(degr +0.006/+0.000) — C won while both arms were healthy, then vanilla
+cracked first. At realistic repetition the win is not an artifact of
+vanilla's overfit collapse.
+
+Trend, five scale/regime points: +0.014 (d=384) → −0.039 (d=768) → −0.060/
+−0.039 (d=1024) → **−0.048 (d=1536 at 8 epochs)**. 11/11 paired runs since
+d=768, zero sign flips.
+
+**Gate decision: SPEC_1B is justified.** The flip survived 2.5× params,
+half the epochs, and a 4× more realistic params/unique ratio.

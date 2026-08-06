@@ -1,0 +1,10 @@
+{
+ "ckpt": "ckpts/epoch39_A1024_s13.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.281,
+  "piqa": 0.51,
+  "arc_easy": 0.2947,
+  "lambada": 0.016
+ }
+}

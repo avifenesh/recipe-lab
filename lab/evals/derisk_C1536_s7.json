@@ -1,0 +1,10 @@
+{
+ "ckpt": "ckpts/derisk_C1536_s7.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.329,
+  "piqa": 0.599,
+  "arc_easy": 0.3509,
+  "lambada": 0.1
+ }
+}
