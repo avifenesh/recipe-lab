@@ -112,8 +112,8 @@ def main():
     ap.add_argument("--order", choices=["std", "cur"], required=True)
     ap.add_argument("--data-dir", default="data1b")
     ap.add_argument("--steps", type=int, default=28650)   # 15B tok @ 0.524M/step
-    ap.add_argument("--micro-bs", type=int, default=4)    # per GPU
-    ap.add_argument("--grad-accum", type=int, default=4)  # 4*4*8*4096=0.524M tok
+    ap.add_argument("--micro-bs", type=int, default=2)    # per GPU (4 OOMs on 80GB)
+    ap.add_argument("--grad-accum", type=int, default=8)  # 2*8*8*4096=0.524M tok
     ap.add_argument("--block-size", type=int, default=4096)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--warmup", type=int, default=2000)
@@ -132,6 +132,7 @@ def main():
     cfg = Config1B(block_size=args.block_size, **ARMS_1B[args.arm])
     model = GPT1B(cfg).cuda()
     raw = model
+    model = torch.compile(model)
     if world > 1:
         model = DDP(model, device_ids=[torch.cuda.current_device()])
     n_params = raw.num_params()

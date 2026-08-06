@@ -10,6 +10,7 @@ set -e
 cd "$(dirname "$0")"
 PY=${PY:-python}
 NPROC=$(nvidia-smi -L | wc -l)
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 mkdir -p results ckpts
 
 lr_probe() {

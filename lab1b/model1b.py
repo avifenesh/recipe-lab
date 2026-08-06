@@ -53,14 +53,15 @@ def rope_cache(seq_len, head_dim, theta, device):
 
 
 def apply_rope(x, cos, sin):
-    # x: (B, H, T, Dh)
+    # x: (B, H, T, Dh). stack+flatten keeps the result contiguous so SDPA
+    # dispatches to flash attention (strided writes forced the math backend:
+    # O(T^2) memory + ~10x slower at seq 4096).
     T = x.shape[2]
     cos, sin = cos[:T][None, None], sin[:T][None, None]
     x1, x2 = x[..., 0::2], x[..., 1::2]
-    out = torch.empty_like(x)
-    out[..., 0::2] = x1 * cos - x2 * sin
-    out[..., 1::2] = x1 * sin + x2 * cos
-    return out
+    y1 = x1 * cos - x2 * sin
+    y2 = x1 * sin + x2 * cos
+    return torch.stack((y1, y2), dim=-1).flatten(-2)
 
 
 class Block(nn.Module):
