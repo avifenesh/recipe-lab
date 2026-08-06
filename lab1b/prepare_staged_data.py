@@ -82,34 +82,48 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", default="data1b")
     ap.add_argument("--math-tokens", type=int, default=600_000_000)
-    ap.add_argument("--phil-tokens", type=int, default=200_000_000)
-    ap.add_argument("--web-tokens", type=int, default=2_200_000_000)
+    # gutenberg philosophy yields ~159M; 150M target, remainder goes to web
+    ap.add_argument("--phil-tokens", type=int, default=150_000_000)
+    ap.add_argument("--web-tokens", type=int, default=2_250_000_000)
     ap.add_argument("--val-web", type=int, default=10_000_000)
     ap.add_argument("--val-math", type=int, default=5_000_000)
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
 
+    def have(name, tokens):
+        p = f"{args.out_dir}/{name}.bin"
+        return os.path.exists(p) and os.path.getsize(p) == tokens * 2
+
     # stage 1: math (train + val head)
-    total = args.math_tokens + args.val_math
-    buf = np.empty(total, dtype=np.uint16)
-    fill(buf, math_docs(), total, "math")
-    buf[:args.val_math].tofile(f"{args.out_dir}/val_math.bin")
-    buf[args.val_math:].tofile(f"{args.out_dir}/stage1_math.bin")
-    del buf
+    if not (have("stage1_math", args.math_tokens) and have("val_math", args.val_math)):
+        total = args.math_tokens + args.val_math
+        buf = np.empty(total, dtype=np.uint16)
+        fill(buf, math_docs(), total, "math")
+        buf[:args.val_math].tofile(f"{args.out_dir}/val_math.bin")
+        buf[args.val_math:].tofile(f"{args.out_dir}/stage1_math.bin")
+        del buf
+    else:
+        print("[math] bins exist, skipping", flush=True)
 
     # stage 2: philosophy
-    buf = np.empty(args.phil_tokens, dtype=np.uint16)
-    fill(buf, phil_docs(), args.phil_tokens, "phil")
-    buf.tofile(f"{args.out_dir}/stage2_phil.bin")
-    del buf
+    if not have("stage2_phil", args.phil_tokens):
+        buf = np.empty(args.phil_tokens, dtype=np.uint16)
+        fill(buf, phil_docs(), args.phil_tokens, "phil")
+        buf.tofile(f"{args.out_dir}/stage2_phil.bin")
+        del buf
+    else:
+        print("[phil] bin exists, skipping", flush=True)
 
     # stage 3: web (val head then train)
-    total = args.web_tokens + args.val_web
-    buf = np.empty(total, dtype=np.uint16)
-    fill(buf, web_docs(), total, "web")
-    buf[:args.val_web].tofile(f"{args.out_dir}/val_web.bin")
-    buf[args.val_web:].tofile(f"{args.out_dir}/stage3_web.bin")
-    del buf
+    if not (have("stage3_web", args.web_tokens) and have("val_web", args.val_web)):
+        total = args.web_tokens + args.val_web
+        buf = np.empty(total, dtype=np.uint16)
+        fill(buf, web_docs(), total, "web")
+        buf[:args.val_web].tofile(f"{args.out_dir}/val_web.bin")
+        buf[args.val_web:].tofile(f"{args.out_dir}/stage3_web.bin")
+        del buf
+    else:
+        print("[web] bins exist, skipping", flush=True)
 
     manifest = {
         "stage1_math": args.math_tokens, "stage2_phil": args.phil_tokens,
