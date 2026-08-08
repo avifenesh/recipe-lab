@@ -15,6 +15,9 @@ rsync -az -e "ssh -o ConnectTimeout=20 -i $KEY" \
   ubuntu@$IP:~/recipe-lab/lab1b/ckpts/${CELL}_best.pt \
   "$DEST/" 2>/dev/null || rsync -az -e "ssh -o ConnectTimeout=20 -i $KEY" \
   ubuntu@$IP:~/recipe-lab/lab1b/results/${CELL}.json "$DEST/"
+# b3 also carries the V_std suite (rescued volume) — grab if present
+rsync -az -e "ssh -o ConnectTimeout=20 -i $KEY" \
+  ubuntu@$IP:~/recipe-lab/lab1b/evals_V_std.json "$DEST/" 2>/dev/null || true
 
 SIR=$(AWS_PROFILE=default aws ec2 describe-instances --region us-east-2 \
   --instance-ids $IID --query 'Reservations[].Instances[].SpotInstanceRequestId' --output text)
