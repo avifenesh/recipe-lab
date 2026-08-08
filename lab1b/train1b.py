@@ -28,7 +28,15 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from model1b import ARMS_1B, Config1B, GPT1B
 
-STAGES = ["stage1_math", "stage2_phil", "stage3_web"]
+# --order selects both the stage set and the serving order:
+#   std/cur use the original 3 stages; cur4 inserts the thinking corpus;
+#   nophil swaps philosophy for extra web (matched total budget).
+STAGE_SETS = {
+    "std": ["stage1_math", "stage2_phil", "stage3_web"],
+    "cur": ["stage1_math", "stage2_phil", "stage3_web"],
+    "cur4": ["stage1_math", "stage2_phil", "stage25_think", "stage3_web"],
+    "nophil": ["stage1_math", "stage3b_webx", "stage3_web"],
+}
 
 
 def setup_dist():
@@ -48,39 +56,41 @@ class StagedData:
 
     def __init__(self, data_dir, order, batch_size, block_size, seed,
                  steps_per_epoch):
+        self.stages = STAGE_SETS[order]
         self.bins = {s: np.memmap(f"{data_dir}/{s}.bin", dtype=np.uint16,
-                                  mode="r") for s in STAGES}
-        self.sizes = {s: len(self.bins[s]) for s in STAGES}
+                                  mode="r") for s in self.stages}
+        self.sizes = {s: len(self.bins[s]) for s in self.stages}
         total = sum(self.sizes.values())
-        self.props = [self.sizes[s] / total for s in STAGES]
+        self.props = [self.sizes[s] / total for s in self.stages]
         self.order = order
         self.bs, self.bl, self.seed = batch_size, block_size, seed
         self.spe = steps_per_epoch
-        # cur: stage boundaries within an epoch, proportional to size
-        b1 = int(self.props[0] * steps_per_epoch)
-        b2 = b1 + int(self.props[1] * steps_per_epoch)
-        self.bounds = (b1, b2)
+        # curriculum: cumulative stage boundaries within an epoch,
+        # proportional to size (any number of stages)
+        acc, self.bounds = 0, []
+        for p in self.props[:-1]:
+            acc += int(p * steps_per_epoch)
+            self.bounds.append(acc)
 
     def stage_for(self, step):
         e_step = step % self.spe
-        if e_step < self.bounds[0]:
-            return STAGES[0]
-        if e_step < self.bounds[1]:
-            return STAGES[1]
-        return STAGES[2]
+        for i, b in enumerate(self.bounds):
+            if e_step < b:
+                return self.stages[i]
+        return self.stages[-1]
 
     def batch(self, step, rank, world):
         rng = np.random.default_rng((self.seed, step, rank))
-        if self.order == "cur":
+        if self.order != "std":   # every non-std order is stage-sequential
             stage = self.stage_for(step)
             src = self.bins[stage]
             ix = rng.integers(0, len(src) - self.bl - 1, size=self.bs)
             xs = [src[i:i + self.bl + 1] for i in ix]
         else:
             xs = []
-            stages = rng.choice(len(STAGES), size=self.bs, p=self.props)
+            stages = rng.choice(len(self.stages), size=self.bs, p=self.props)
             for si in stages:
-                src = self.bins[STAGES[si]]
+                src = self.bins[self.stages[si]]
                 i = int(rng.integers(0, len(src) - self.bl - 1))
                 xs.append(src[i:i + self.bl + 1])
         arr = np.stack([a.astype(np.int64) for a in xs])
@@ -109,7 +119,11 @@ def evaluate(model, path, batch_size, block_size, iters=40):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", choices=ARMS_1B, required=True)
-    ap.add_argument("--order", choices=["std", "cur"], required=True)
+    ap.add_argument("--order", choices=list(STAGE_SETS), required=True)
+    ap.add_argument("--extend-from", default=None,
+                    help="ckpt to continue: loads model+opt, keeps its curve, "
+                         "runs steps [ckpt.step+1, --steps) with THIS run's "
+                         "LR schedule (rewarm+cosine over the extension)")
     ap.add_argument("--data-dir", default="data1b")
     ap.add_argument("--steps", type=int, default=28650)   # 15B tok @ 0.524M/step
     ap.add_argument("--micro-bs", type=int, default=2)    # per GPU (4 OOMs on 80GB)
@@ -144,13 +158,15 @@ def main():
                             betas=(0.9, 0.95), weight_decay=0.1)
 
     tokens_per_step = args.micro_bs * args.grad_accum * world * args.block_size
-    # steps per epoch over 3B unique tokens
-    unique = sum(os.path.getsize(f"{args.data_dir}/{s}.bin") // 2 for s in STAGES)
+    # steps per epoch over the unique tokens of THIS order's stage set
+    unique = sum(os.path.getsize(f"{args.data_dir}/{s}.bin") // 2
+                 for s in STAGE_SETS[args.order])
     spe = max(1, unique // tokens_per_step)
     data = StagedData(args.data_dir, args.order, args.micro_bs,
                       args.block_size, args.seed, spe)
 
     start_step = 0
+    ext_base = 0
     log = {"arm": args.arm, "order": args.order, "params": n_params,
            "config": vars(args), "curve": []}
     ckpt_path = args.ckpt or f"ckpts/{args.arm}_{args.order}.pt"
@@ -160,13 +176,29 @@ def main():
         opt.load_state_dict(ck["opt"])
         start_step = ck["step"] + 1
         log = ck["log"]
+        ext_base = ck.get("ext_base", 0)
         if master:
             print(f"resumed from step {start_step}", flush=True)
+    elif args.extend_from and os.path.exists(args.extend_from):
+        ck = torch.load(args.extend_from, map_location="cpu", weights_only=False)
+        raw.load_state_dict(ck["model"])
+        opt.load_state_dict(ck["opt"])
+        start_step = ck["step"] + 1
+        ext_base = start_step          # LR schedule restarts from here
+        log = ck["log"]
+        log["extended_at"] = start_step
+        if master:
+            print(f"EXTENDING from {args.extend_from} @step {start_step}; "
+                  f"rewarm LR over [{start_step}, {args.steps})", flush=True)
 
     def lr_at(step):
-        if step < args.warmup:
-            return args.lr * (step + 1) / args.warmup
-        p = (step - args.warmup) / max(1, args.steps - args.warmup)
+        # extension runs re-anchor warmup+cosine at ext_base so the added
+        # epochs get their own rewarm and decay (identical for V and L)
+        s = step - ext_base
+        span = args.steps - ext_base
+        if s < args.warmup:
+            return args.lr * (s + 1) / args.warmup
+        p = (s - args.warmup) / max(1, span - args.warmup)
         return args.lr * (0.1 + 0.45 * (1 + math.cos(math.pi * min(p, 1.0))))
 
     best = min((c["val_web"] for c in log["curve"]), default=float("inf"))
@@ -214,7 +246,7 @@ def main():
             os.makedirs(os.path.dirname(ckpt_path) or ".", exist_ok=True)
             tmp = ckpt_path + ".tmp"
             torch.save({"model": raw.state_dict(), "opt": opt.state_dict(),
-                        "step": step, "log": log}, tmp)
+                        "step": step, "log": log, "ext_base": ext_base}, tmp)
             os.replace(tmp, ckpt_path)
 
     if master:
