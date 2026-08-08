@@ -12,16 +12,39 @@ mid-L_std recovered via persistent volume + snapshot; queue reordered onto
 
 Checkpoints: HF `Avifenesh/recipe-lab-1b` (public).
 
-## The 2×2 (best val_web; final = last step)
+## The 2×2 — FINAL (best val_web)
 
-| cell | params | best val_web | best val_math | status |
-|------|--------|--------------|---------------|--------|
-| V-std | 1.30B | 2.7062 | 1.6214 | DONE |
-| V-cur | 1.30B | **2.6969** | 1.6317* | DONE |
-| L-std | 0.70B | 2.7487 | 1.6601 | DONE |
-| L-cur | 0.70B | pending (~2.73 proj) | pending | ~72%, ETA 2h |
+| | std | cur | curriculum margin |
+|--|-----|-----|-------------------|
+| **V 1.30B** | 2.7062 | **2.6969** | −0.0093 |
+| **L 0.70B** | 2.7487 | 2.7394 | −0.0093 |
 
-*best-ckpt math val; curve minimum may differ slightly.
+Loop margin: +0.0425 (std), +0.0425 (cur). The factorial is exactly
+additive — identical margins on both axes to the fourth decimal.
+
+## Downstream — FINAL (zero-shot, 1000/task)
+
+| task | V_std | V_cur | L_std | L_cur |
+|------|-------|-------|-------|-------|
+| hellaswag | .398 | .402 | .398 | .394 |
+| piqa | .690 | **.706** | .690 | .681 |
+| arc_easy | .517 | .523 | **.535** | .532 |
+| arc_challenge | .304 | **.334** | .308 | .298 |
+| winogrande | **.541** | .530 | .499 | .524 |
+| boolq | .491 | .589 | **.615** | .605 |
+| sciq | **.620** | .607 | .610 | .593 |
+| lambada | .334 | **.350** | .324 | .325 |
+| **MEAN** | .4870 | **.5051** | .4974 | .4939 |
+
+- **V-cur is the best model of the four** — best loss AND best eval mean.
+- Curriculum on vanilla: +1.8 eval points (.487→.505), driven by
+  arc_challenge +3.0, boolq +9.8, lambada +1.6, piqa +1.6 — the
+  reasoning/comprehension-flavored tasks. Fact-lookup (sciq) unchanged/−.
+- Curriculum on loop: loss win did NOT carry to the suite mean
+  (.4974→.4939, −0.35pt; mixed per-task). P4 holds for vanilla, not loop.
+- Oddity worth noting: L_std beats V_std on the suite mean (.4974 vs .4870)
+  despite worse loss — driven by boolq (.615 vs .491). Small-N noise on
+  2-choice tasks likely; would need full sets to certify.
 
 ## Pre-registered verdicts
 
@@ -41,13 +64,19 @@ effects shrink with scale, mostly ≤160M): a clean ordering win at 1.3B.
 Dynamics: curriculum dips behind mid-math-stage each epoch, exits ahead
 after each cycle; lead present through the whole back half.
 
-**P3 — interaction (curriculum helps loops more): pending L-cur.** At every
-matched step so far L-cur leads L-std by ~0.02–0.035, vs the V pair's final
-−0.0093 — trending toward CONFIRMED at ~2× the vanilla margin. Final
-number decides.
+**P3 — interaction (curriculum helps loops more): REFUTED.** Curriculum
+margin identical on both architectures (−0.0093 = −0.0093). The mid-run
+L-cur lead over L-std's curve converged to the same final margin. Verdict:
+curriculum and architecture are **independent, additive effects** — no
+synergy, but perfect composability. (A recipe ingredient that transfers
+unchanged across architectures is operationally valuable even without
+interaction.)
 
-**P4 — downstream ordering: pending** (8-task suite runs on each box after
-training; V-cur/L-std evals in progress now).
+**P4 — downstream ordering: SPLIT.** Vanilla pair: confirmed — V-cur beats
+V-std on loss AND suite mean (+1.8pt, concentrated in reasoning tasks).
+Loop pair: loss ordering did not carry to suite mean (−0.35pt, mixed).
+Honest bound: 1000-sample subsets; per-task swings of ±2pt are within
+noise on 2-choice tasks.
 
 ## Owner's thesis (recorded 2026-08-08)
 

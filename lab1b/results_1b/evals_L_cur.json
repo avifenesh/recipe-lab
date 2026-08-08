@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/L_cur_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.394,
+  "piqa": 0.681,
+  "arc_easy": 0.5316,
+  "arc_challenge": 0.2977,
+  "winogrande": 0.524,
+  "boolq": 0.605,
+  "sciq": 0.593,
+  "lambada": 0.325,
+  "mean": 0.4939
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/V_std_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.398,
+  "piqa": 0.69,
+  "arc_easy": 0.5175,
+  "arc_challenge": 0.3043,
+  "winogrande": 0.541,
+  "boolq": 0.491,
+  "sciq": 0.62,
+  "lambada": 0.334,
+  "mean": 0.487
+ }
+}
