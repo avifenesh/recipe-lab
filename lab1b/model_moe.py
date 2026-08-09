@@ -60,6 +60,11 @@ class ConfigMoE:
     d_expert: int = 256
     capacity_factor: float = 2.0     # measured: 1.25 dropped ~20% of routes
     bias_update_rate: float = 1e-2   # aux-loss-free balancing step
+    # Router-reuse diagnostic. Off by default: it stashes a tensor on the
+    # module between applications, which is a side effect torch.compile has to
+    # graph-break on, so it would tax the very runs it is meant to observe.
+    # Enable for a short uncompiled probe (--track-overlap --no-compile).
+    track_router_overlap: bool = False
     # --- stack / loop schedule ---
     n_group: int = 5            # groups of [s,s,s,s,a] applications
     ssm_per_group: int = 4      # linear applications per attention application
@@ -262,6 +267,14 @@ class MoEFFN(nn.Module):
         self.register_buffer("route_count", torch.zeros(()), persistent=False)
         self.register_buffer("drop_count", torch.zeros(()), persistent=False)
         self.register_buffer("drop_frac", torch.zeros(()), persistent=False)
+        # A looped block reuses its router as well as its weights, so it can
+        # pick the same experts on every application — a degenerate loop that
+        # wastes the extra compute and that loss alone would not reveal. Track
+        # the mean overlap between consecutive applications of this block.
+        self.register_buffer("overlap_sum", torch.zeros(()), persistent=False)
+        self.register_buffer("overlap_n", torch.zeros(()), persistent=False)
+        self.track_overlap = cfg.track_router_overlap
+        self._prev_sel = None
 
     def forward(self, x):
         B, T, D = x.shape
@@ -269,6 +282,16 @@ class MoEFFN(nn.Module):
         n = xf.shape[0]
         scores = torch.sigmoid(self.router(xf).float())            # (n,E)
         sel = torch.topk(scores + self.expert_bias, self.k, dim=-1).indices
+
+        if self.track_overlap:
+            with torch.no_grad():
+                prev = self._prev_sel
+                if prev is not None and prev.shape == sel.shape:
+                    # |intersection| / k, averaged over tokens
+                    same = (sel.unsqueeze(-1) == prev.unsqueeze(-2)).any(-1)
+                    self.overlap_sum += same.float().sum(-1).mean() / self.k
+                    self.overlap_n += 1
+                self._prev_sel = sel.detach()
         w = scores.gather(-1, sel)
         w = w / w.sum(-1, keepdim=True).clamp(min=1e-9)            # (n,k)
 
@@ -329,6 +352,23 @@ class MoEFFN(nn.Module):
         self.load_count.zero_()
         self.route_count.zero_()
         self.drop_count.zero_()
+        self.overlap_sum.zero_()
+        self.overlap_n.zero_()
+        # drop the cross-step reference: the first application of the next step
+        # must not be compared against the last application of this one
+        self._prev_sel = None
+
+    @property
+    def router_overlap(self):
+        """Mean expert overlap between consecutive applications of this block.
+
+        NaN for un-looped blocks (never applied twice in a step). ~1.0 means
+        the loop re-selects the same experts every time and is degenerate;
+        ~k/E means routing is independent across applications.
+        """
+        if self.overlap_n.item() == 0:
+            return float("nan")
+        return (self.overlap_sum / self.overlap_n).item()
 
     @property
     def load(self):
@@ -428,6 +468,16 @@ class HybridMoE(nn.Module):
         fr = [m.drop_frac.item() for m in self.modules()
               if isinstance(m, MoEFFN)]
         return sum(fr) / max(1, len(fr))
+
+    def router_overlap(self):
+        """Mean over looped blocks; NaN when nothing is looped (HV)."""
+        ov = [m.router_overlap for m in self.modules()
+              if isinstance(m, MoEFFN) and m.overlap_n.item() > 0]
+        return sum(ov) / len(ov) if ov else float("nan")
+
+    def chance_overlap(self):
+        """Overlap a random router would produce: k/E."""
+        return self.cfg.n_expert_active / self.cfg.n_expert
 
     def num_params(self):
         return sum(p.numel() for p in self.parameters())

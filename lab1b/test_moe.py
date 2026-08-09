@@ -144,6 +144,59 @@ def test_moe_routing():
     print(f"  moe overflow path OK, drop_frac={f2.drop_frac.item():.3f}")
 
 
+def test_router_overlap_tracking():
+    """Looped arms must report overlap; un-looped arms must report NaN.
+
+    A looped MoE block reuses its router across applications, so it can
+    re-select the same experts every time — a degenerate loop that burns the
+    extra compute for nothing and that loss alone would not expose.
+    """
+    import math as _math
+    small = dict(d_model=64, n_head=4, n_kv_head=2, block_size=64,
+                 n_expert=8, n_expert_active=2, d_expert=16, d_state=16,
+                 n_group=2, ssm_per_group=4, ssd_chunk=32,
+                 track_router_overlap=True)
+    idx = torch.randint(0, 1000, (2, 64))
+
+    hv = HybridMoE(ConfigMoE(**small, **ARMS_MOE["HV"]))
+    hv(idx, idx)
+    assert _math.isnan(hv.router_overlap()), "un-looped arm must report NaN"
+
+    hl = HybridMoE(ConfigMoE(**small, **ARMS_MOE["HL"]))
+    hl(idx, idx)
+    ov = hl.router_overlap()
+    assert not _math.isnan(ov), "looped arm must report an overlap"
+    assert 0.0 <= ov <= 1.0, ov
+    assert hl.chance_overlap() == 2 / 8
+    print(f"  router overlap tracked: HL={ov:.3f} "
+          f"(chance {hl.chance_overlap():.3f}), HV=nan")
+
+    # a duplicated router picks identically every application -> overlap 1.0
+    with torch.no_grad():
+        for m in hl.modules():
+            if isinstance(m, MoEFFN):
+                m.overlap_sum.zero_()
+                m.overlap_n.zero_()
+                m._prev_sel = None
+    hl(idx, idx)
+    assert hl.router_overlap() >= 0.0
+    # stats must not leak across optimizer steps
+    hl.rebalance()
+    for m in hl.modules():
+        if isinstance(m, MoEFFN):
+            assert m.overlap_n.item() == 0 and m._prev_sel is None
+    assert _math.isnan(hl.router_overlap()), "rebalance must clear overlap"
+    print("  router overlap resets per step OK")
+
+    # default must be OFF so the tracker never taxes a full compiled run
+    plain = dict(small)
+    plain.pop("track_router_overlap")
+    off = HybridMoE(ConfigMoE(**plain, **ARMS_MOE["HL"]))
+    off(idx, idx)
+    assert _math.isnan(off.router_overlap()), "tracking must default to off"
+    print("  router overlap off by default OK")
+
+
 def test_arms_matched_applications():
     """HV and HL must apply the same count and the same type sequence."""
     small = dict(d_model=64, n_head=4, n_kv_head=2, block_size=128,
@@ -228,6 +281,7 @@ if __name__ == "__main__":
     test_moe_routing()
     print("Arms:")
     test_arms_matched_applications()
+    test_router_overlap_tracking()
     test_forward_backward()
     test_train_steps_stable()
     print("ALL PASS")

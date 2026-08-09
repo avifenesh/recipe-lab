@@ -84,6 +84,10 @@ def main():
     ap.add_argument("--eval-every", type=int, default=500)
     ap.add_argument("--ckpt-every", type=int, default=1000)
     ap.add_argument("--no-compile", action="store_true")
+    ap.add_argument("--track-overlap", action="store_true",
+                    help="log router reuse across loop applications; forces "
+                         "--no-compile since the tracker's side effect would "
+                         "graph-break. For short probes, not full runs.")
     ap.add_argument("--ckpt", default=None)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -96,6 +100,9 @@ def main():
     over = {}
     if args.block_size:
         over["block_size"] = args.block_size
+    if args.track_overlap:
+        over["track_router_overlap"] = True
+        args.no_compile = True
     raw = build(args.arm, args.size, **over).cuda()
     cfg = raw.cfg
     block = cfg.block_size
@@ -133,6 +140,7 @@ def main():
            "order": "flat" if args.flat_data else args.order,
            "params": n_total, "active_params": n_active,
            "applications": raw.n_applications(),
+           "chance_overlap": raw.chance_overlap(),
            "config": vars(args), "curve": []}
     ckpt_path = args.ckpt or f"ckpts/{args.arm}_{args.size}.pt"
     if os.path.exists(ckpt_path):
@@ -166,6 +174,8 @@ def main():
                 (loss / args.grad_accum).backward()
         gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
+        # read the routing stats for this step BEFORE rebalance() consumes them
+        moe_stats = (raw.drop_frac(), raw.router_overlap())
         raw.rebalance()      # aux-loss-free load balancing, no extra gradient
 
         if step % args.eval_every == 0 or step == args.steps - 1:
@@ -175,7 +185,11 @@ def main():
                 rec = {"step": step, "tokens": step * tokens_per_step,
                        "train_loss": round(loss.item(), 4), **vals,
                        "gnorm": round(float(gnorm), 3),
-                       "drop_frac": round(raw.drop_frac(), 5),
+                       "drop_frac": round(moe_stats[0], 5),
+                       # looped arms only: ~1.0 means the loop re-picks the
+                       # same experts every application (degenerate), chance
+                       # is k/E. NaN for un-looped arms.
+                       "router_overlap": round(moe_stats[1], 4),
                        "stage": data.stage_for(step * args.grad_accum),
                        "sec": round(time.time() - t0, 1)}
                 log["curve"].append(rec)
