@@ -1,1 +1,327 @@
-{"moved_to": "boxL"}
+{
+ "arm": "L",
+ "order": "cur4",
+ "params": 700762112,
+ "config": {
+  "arm": "L",
+  "order": "cur4",
+  "extend_from": null,
+  "data_dir": "data1b",
+  "steps": 28650,
+  "micro_bs": 2,
+  "grad_accum": 8,
+  "block_size": 4096,
+  "lr": 0.0006,
+  "warmup": 2000,
+  "seed": 7,
+  "eval_every": 1000,
+  "ckpt_every": 2000,
+  "ckpt": "ckpts/L_cur4.pt",
+  "out": "results/L_cur4.json"
+ },
+ "curve": [
+  {
+   "step": 0,
+   "tokens": 0,
+   "train_loss": 11.1966,
+   "val_web": 11.2507,
+   "val_math": 11.0434,
+   "gnorm": 40.941,
+   "stage": "stage1_math",
+   "sec": 47.7
+  },
+  {
+   "step": 1000,
+   "tokens": 524288000,
+   "train_loss": 4.4353,
+   "val_web": 4.47,
+   "val_math": 3.2392,
+   "gnorm": 1.36,
+   "stage": "stage3_web",
+   "sec": 1585.8
+  },
+  {
+   "step": 2000,
+   "tokens": 1048576000,
+   "train_loss": 3.5993,
+   "val_web": 3.4849,
+   "val_math": 2.6507,
+   "gnorm": 0.214,
+   "stage": "stage3_web",
+   "sec": 3130.6
+  },
+  {
+   "step": 3000,
+   "tokens": 1572864000,
+   "train_loss": 3.1649,
+   "val_web": 3.2614,
+   "val_math": 2.5047,
+   "gnorm": 0.146,
+   "stage": "stage3_web",
+   "sec": 4690.8
+  },
+  {
+   "step": 4000,
+   "tokens": 2097152000,
+   "train_loss": 1.7875,
+   "val_web": 3.557,
+   "val_math": 2.2898,
+   "gnorm": 1.489,
+   "stage": "stage25_think",
+   "sec": 6238.7
+  },
+  {
+   "step": 5000,
+   "tokens": 2621440000,
+   "train_loss": 3.0298,
+   "val_web": 3.1032,
+   "val_math": 2.108,
+   "gnorm": 0.161,
+   "stage": "stage3_web",
+   "sec": 7804.2
+  },
+  {
+   "step": 6000,
+   "tokens": 3145728000,
+   "train_loss": 2.8694,
+   "val_web": 3.0406,
+   "val_math": 2.1182,
+   "gnorm": 0.144,
+   "stage": "stage3_web",
+   "sec": 9351.5
+  },
+  {
+   "step": 7000,
+   "tokens": 3670016000,
+   "train_loss": 1.5372,
+   "val_web": 3.091,
+   "val_math": 1.8766,
+   "gnorm": 0.169,
+   "stage": "stage1_math",
+   "sec": 10925.8
+  },
+  {
+   "step": 8000,
+   "tokens": 4194304000,
+   "train_loss": 2.6351,
+   "val_web": 2.9853,
+   "val_math": 1.9402,
+   "gnorm": 0.129,
+   "stage": "stage3_web",
+   "sec": 12461.8
+  },
+  {
+   "step": 9000,
+   "tokens": 4718592000,
+   "train_loss": 3.2907,
+   "val_web": 2.9452,
+   "val_math": 1.9528,
+   "gnorm": 0.136,
+   "stage": "stage3_web",
+   "sec": 14035.7
+  },
+  {
+   "step": 10000,
+   "tokens": 5242880000,
+   "train_loss": 1.8676,
+   "val_web": 2.9777,
+   "val_math": 1.8437,
+   "gnorm": 0.178,
+   "stage": "stage1_math",
+   "sec": 15582.3
+  },
+  {
+   "step": 11000,
+   "tokens": 5767168000,
+   "train_loss": 2.6144,
+   "val_web": 2.9156,
+   "val_math": 1.8549,
+   "gnorm": 0.141,
+   "stage": "stage3_web",
+   "sec": 17145.7
+  },
+  {
+   "step": 12000,
+   "tokens": 6291456000,
+   "train_loss": 2.805,
+   "val_web": 2.8881,
+   "val_math": 1.8696,
+   "gnorm": 0.123,
+   "stage": "stage3_web",
+   "sec": 18689.5
+  },
+  {
+   "step": 13000,
+   "tokens": 6815744000,
+   "train_loss": 1.9284,
+   "val_web": 2.9067,
+   "val_math": 1.7897,
+   "gnorm": 0.122,
+   "stage": "stage1_math",
+   "sec": 20263.1
+  },
+  {
+   "step": 14000,
+   "tokens": 7340032000,
+   "train_loss": 2.8752,
+   "val_web": 2.8731,
+   "val_math": 1.8019,
+   "gnorm": 0.123,
+   "stage": "stage3_web",
+   "sec": 21799.6
+  },
+  {
+   "step": 15000,
+   "tokens": 7864320000,
+   "train_loss": 2.6868,
+   "val_web": 2.8456,
+   "val_math": 1.8076,
+   "gnorm": 0.111,
+   "stage": "stage3_web",
+   "sec": 23373.4
+  },
+  {
+   "step": 16000,
+   "tokens": 8388608000,
+   "train_loss": 2.6888,
+   "val_web": 2.8282,
+   "val_math": 1.8147,
+   "gnorm": 0.122,
+   "stage": "stage3_web",
+   "sec": 24918.8
+  },
+  {
+   "step": 17000,
+   "tokens": 8912896000,
+   "train_loss": 0.7347,
+   "val_web": 2.9638,
+   "val_math": 1.8486,
+   "gnorm": 0.114,
+   "stage": "stage25_think",
+   "sec": 1580.1
+  },
+  {
+   "step": 18000,
+   "tokens": 9437184000,
+   "train_loss": 2.5651,
+   "val_web": 2.8074,
+   "val_math": 1.7547,
+   "gnorm": 0.12,
+   "stage": "stage3_web",
+   "sec": 3122.0
+  },
+  {
+   "step": 19000,
+   "tokens": 9961472000,
+   "train_loss": 2.7437,
+   "val_web": 2.7942,
+   "val_math": 1.7616,
+   "gnorm": 0.12,
+   "stage": "stage3_web",
+   "sec": 4703.3
+  },
+  {
+   "step": 20000,
+   "tokens": 10485760000,
+   "train_loss": 2.9291,
+   "val_web": 2.839,
+   "val_math": 1.73,
+   "gnorm": 0.155,
+   "stage": "stage2_phil",
+   "sec": 6254.8
+  },
+  {
+   "step": 21000,
+   "tokens": 11010048000,
+   "train_loss": 2.4845,
+   "val_web": 2.7791,
+   "val_math": 1.7182,
+   "gnorm": 0.114,
+   "stage": "stage3_web",
+   "sec": 7823.6
+  },
+  {
+   "step": 22000,
+   "tokens": 11534336000,
+   "train_loss": 2.3162,
+   "val_web": 2.7675,
+   "val_math": 1.7232,
+   "gnorm": 0.12,
+   "stage": "stage3_web",
+   "sec": 9375.5
+  },
+  {
+   "step": 23000,
+   "tokens": 12058624000,
+   "train_loss": 1.6906,
+   "val_web": 2.7869,
+   "val_math": 1.671,
+   "gnorm": 0.127,
+   "stage": "stage1_math",
+   "sec": 10957.1
+  },
+  {
+   "step": 24000,
+   "tokens": 12582912000,
+   "train_loss": 2.5713,
+   "val_web": 2.7576,
+   "val_math": 1.6875,
+   "gnorm": 0.126,
+   "stage": "stage3_web",
+   "sec": 12499.0
+  },
+  {
+   "step": 25000,
+   "tokens": 13107200000,
+   "train_loss": 2.5266,
+   "val_web": 2.7492,
+   "val_math": 1.694,
+   "gnorm": 0.126,
+   "stage": "stage3_web",
+   "sec": 14080.5
+  },
+  {
+   "step": 26000,
+   "tokens": 13631488000,
+   "train_loss": 1.5231,
+   "val_web": 2.7619,
+   "val_math": 1.6604,
+   "gnorm": 0.115,
+   "stage": "stage1_math",
+   "sec": 15632.1
+  },
+  {
+   "step": 27000,
+   "tokens": 14155776000,
+   "train_loss": 2.6564,
+   "val_web": 2.7458,
+   "val_math": 1.669,
+   "gnorm": 0.124,
+   "stage": "stage3_web",
+   "sec": 17200.1
+  },
+  {
+   "step": 28000,
+   "tokens": 14680064000,
+   "train_loss": 2.5351,
+   "val_web": 2.7416,
+   "val_math": 1.6752,
+   "gnorm": 0.131,
+   "stage": "stage3_web",
+   "sec": 18751.3
+  },
+  {
+   "step": 28649,
+   "tokens": 15020326912,
+   "train_loss": 2.3281,
+   "val_web": 2.7405,
+   "val_math": 1.669,
+   "gnorm": 0.133,
+   "stage": "stage3_web",
+   "sec": 1039.3
+  }
+ ],
+ "final_val_web": 2.7405,
+ "best_val_web": 2.740485018491745,
+ "wall_sec": 1048.3
+}

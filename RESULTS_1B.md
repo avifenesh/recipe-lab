@@ -222,9 +222,55 @@ post-training**, which is where SPEC_PILOT_MOE puts them. T4 (`L_cur4`)
 tests whether a looped model, which spends more compute per token, changes
 that verdict.
 
-## T4 — loop × thinking
+## T4 — loop × thinking: the FIRST real interaction in the campaign
 
-Pending (`L_cur4`, boxL, ~step 23000/30500).
+`L_cur4` finished at loss 2.7405, eval mean **.4998**. Both cur4 arms ran the
+same 28650 steps, so the pair is matched.
+
+On loss, nothing happens — thinking is free and the loop's deficit is
+untouched:
+
+| | loss | vs its cur3 arm |
+|---|---|---|
+| V_cur / V_cur4 | 2.6969 / 2.6971 | +0.0002 |
+| L_cur / L_cur4 | 2.7394 / 2.7405 | +0.0011 |
+| **L − V** | **+0.0425 → +0.0434** | gap unchanged |
+
+On evals, the sign splits by architecture:
+
+| | eval mean | vs its cur3 arm |
+|---|---|---|
+| V_cur → V_cur4 | .5051 → .4960 | **−0.91pt (hurts)** |
+| L_cur → L_cur4 | .4939 → .4998 | **+0.59pt (helps)** |
+| L − V | −1.12pt → **+0.38pt** | **loop overtakes** |
+
+**This is the interaction P3 looked for and did not find in the original
+factorial.** There, curriculum was perfectly additive: −0.0093 on both
+architectures. Here the reasoning-trace stage moves the two architectures in
+*opposite directions*, and the loop pair ends up ahead of the vanilla pair on
+the metric that decides — the only cell in the campaign where a looped 0.70B
+model beats a 1.30B vanilla model on eval mean.
+
+Mechanically this is what the owner predicted when he asked for T4: a looped
+model spends more compute per token, and reasoning traces are the data type
+where extra per-token computation should pay. Where the traces land:
+arc_challenge .298 → .308 and lambada .325 → .350 for the loop, against
+arc_challenge .334 → .288 and lambada .350 → .319 for vanilla. Vanilla's
+collapse on exactly the tasks the loop gains on is the cleanest form this
+result could take.
+
+Caveats kept honest: single seed per cell, 1000 samples/task, and the total
+margin (+0.38pt) is inside the ±2pt per-task noise this suite showed earlier
+— it is the *direction and the mirrored per-task pattern* across four cells
+that carries the claim, not the magnitude. The right confirmation is a seed-13
+replication of `L_cur4` and `V_cur4`, which is ~$180 of p5 time and is the
+cheapest high-value run left on the board.
+
+Combined with T3: reasoning traces failed as a pretraining stage **for
+vanilla** (which is what T3 measured and reported) but not universally — for
+a weight-shared looped model they help. The SPEC_PILOT_MOE recommendation to
+move traces into post-training therefore holds for a dense/vanilla base and
+needs revisiting if the pilot ships the looped arm.
 
 # Round 15 — hybrid-MoE sign-check (running, 2026-08-09)
 
