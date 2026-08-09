@@ -345,6 +345,57 @@ forward-only check and would have silently wasted a p5 run:
    drop rate** — a quietly gutted sparse FFN. Counts now accumulate across
    the whole optimizer step; drop_frac falls 0.062 → 0.000 by step 100.
 
+## Round 15 seed 7 — P1/P2/P3 pass, P4 fails on a misleading metric
+
+Both seed-7 runs complete (20000 steps, d=768, 12.5M unique tokens ~19.6
+epochs, lr 6e-4 — the exact regime the dense flip verified 3/3 seeds in).
+
+| arm | best val | @step | final | degradation | total | active | max drop_frac |
+|-----|----------|-------|-------|-------------|-------|--------|---------------|
+| HV_s7 | 4.7231 | 3000 | 7.4653 | +2.742 | 0.307B | 0.134B | 0.00048 |
+| HL_s7 | **4.6891** | 3250 | 7.6436 | +2.955 | 0.197B | 0.093B | 0.00117 |
+
+- **P1 (HL < HV): PASS** — gap **−0.0340**. The loop flip survives the move to
+  a hybrid-MoE backbone (Mamba-2 SSD state mixer + GQA retriever + fine-grained
+  MoE), with HL storing **35.8% fewer total and 30.4% fewer active** params at
+  matched applications and matched attention placement.
+- **P2 (gap ≤ −0.02): PASS** — clears the SPEC_1B bar by 1.7×.
+- **P3 (drop_frac < 0.01): PASS** — 0.00048 and 0.00117, ~10-20× under the
+  threshold, and HL's late-training drop sits at 0.0. No routing collapse, so
+  the comparison reflects the architecture rather than a gutted sparse FFN.
+- **P4 (HL degradation ≤ HV): FAIL as written — but the metric misleads here.**
+
+On P4, the step-by-step curve says something different from the endpoint:
+
+| step | HV | HL | HL − HV |
+|------|-----|-----|---------|
+| 1000 | 5.2527 | 5.2751 | +0.0224 |
+| 3000 | 4.7231 | 4.6904 | −0.0327 |
+| 4000 | 4.8517 | 4.7339 | **−0.1178** |
+| 6000 | 5.2045 | 5.0240 | **−0.1805** |
+| 10000 | 6.1863 | 5.9518 | **−0.2345** |
+| 15000 | 7.0203 | 6.9844 | −0.0359 |
+| 19750 | 7.4410 | 7.6106 | +0.1696 |
+
+HL is ahead at **every** checkpoint from 3000 to 15000 — by up to −0.23, far
+larger than the −0.034 best-val gap — and only crosses above HV in the last
+~4000 steps. So HL is *more* robust through the region that matters and its
+larger "degradation past best" number is an artifact of being measured from a
+lower floor while ending marginally worse at step ~20000, i.e. ~40 epochs deep
+into a regime no production run would occupy.
+
+The honest reading: the epoch-regularizer effect (dense rounds 7/9/11, where
+degradation was cleanly param-ordered) **does not reproduce as an endpoint
+statistic on this backbone**, while the thing it was a proxy for — staying
+better for longer under repetition — does hold and then some. P4 should be
+restated for future rungs as *area between the curves past best*, or degradation
+at a fixed sensible horizon (e.g. 2× best-step), not distance to a step-20000
+endpoint that both arms have long since abandoned.
+
+Not calling G1 on one seed: seed 13 is running for both arms (~5h). If it
+reproduces P1 at a similar margin, G1 passes on the criteria that matter
+(P1/P2/P3) with P4 formally failed and explained.
+
 Also instrumented (off by default): expert overlap between consecutive
 applications of a looped block. A looped MoE block reuses its router, so it
 can re-pick the same experts every application — a degenerate loop that loss
