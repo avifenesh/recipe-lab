@@ -345,56 +345,97 @@ forward-only check and would have silently wasted a p5 run:
    drop rate** — a quietly gutted sparse FFN. Counts now accumulate across
    the whole optimizer step; drop_frac falls 0.062 → 0.000 by step 100.
 
-## Round 15 seed 7 — P1/P2/P3 pass, P4 fails on a misleading metric
+## Round 15 VERDICT — G1 PASSES. The flip survives the hybrid-MoE backbone.
 
-Both seed-7 runs complete (20000 steps, d=768, 12.5M unique tokens ~19.6
-epochs, lr 6e-4 — the exact regime the dense flip verified 3/3 seeds in).
+All four runs complete (HV/HL × seeds 7/13, 20000 steps each, d=768, 12.5M
+unique tokens ≈19.6 epochs, lr 6e-4 — the exact regime the dense flip verified
+3/3 seeds in, so the backbone is the only changed variable).
 
-| arm | best val | @step | final | degradation | total | active | max drop_frac |
-|-----|----------|-------|-------|-------------|-------|--------|---------------|
-| HV_s7 | 4.7231 | 3000 | 7.4653 | +2.742 | 0.307B | 0.134B | 0.00048 |
-| HL_s7 | **4.6891** | 3250 | 7.6436 | +2.955 | 0.197B | 0.093B | 0.00117 |
+| arm | best val | @step | final | degradation | max drop_frac |
+|-----|----------|-------|-------|-------------|---------------|
+| HV_s7 | 4.7231 | 3000 | 7.4653 | +2.742 | 0.00048 |
+| HL_s7 | **4.6891** | 3250 | 7.6436 | +2.955 | 0.00117 |
+| HV_s13 | 4.7334 | 2750 | 7.4696 | +2.736 | 0.00169 |
+| HL_s13 | **4.6962** | 3250 | 7.6198 | +2.924 | 0.00244 |
 
-- **P1 (HL < HV): PASS** — gap **−0.0340**. The loop flip survives the move to
-  a hybrid-MoE backbone (Mamba-2 SSD state mixer + GQA retriever + fine-grained
-  MoE), with HL storing **35.8% fewer total and 30.4% fewer active** params at
-  matched applications and matched attention placement.
-- **P2 (gap ≤ −0.02): PASS** — clears the SPEC_1B bar by 1.7×.
-- **P3 (drop_frac < 0.01): PASS** — 0.00048 and 0.00117, ~10-20× under the
-  threshold, and HL's late-training drop sits at 0.0. No routing collapse, so
-  the comparison reflects the architecture rather than a gutted sparse FFN.
-- **P4 (HL degradation ≤ HV): FAIL as written — but the metric misleads here.**
+HV: 0.307B total / 0.134B active. HL: 0.197B / 0.093B — **35.8% fewer total,
+30.4% fewer active**, at 15 matched applications with matched attention
+placement.
 
-On P4, the step-by-step curve says something different from the endpoint:
+**P1 (HL < HV, both seeds): PASS.** Gaps **−0.0340** (s7) and **−0.0372** (s13).
+Zero sign flips, extending the campaign to 13/13 paired runs since d=768.
 
-| step | HV | HL | HL − HV |
-|------|-----|-----|---------|
-| 1000 | 5.2527 | 5.2751 | +0.0224 |
-| 3000 | 4.7231 | 4.6904 | −0.0327 |
-| 4000 | 4.8517 | 4.7339 | **−0.1178** |
-| 6000 | 5.2045 | 5.0240 | **−0.1805** |
-| 10000 | 6.1863 | 5.9518 | **−0.2345** |
-| 15000 | 7.0203 | 6.9844 | −0.0359 |
-| 19750 | 7.4410 | 7.6106 | +0.1696 |
+**P2 (gap ≤ −0.02, both seeds): PASS.** Clears the SPEC_1B bar by 1.7-1.9×.
+The margin is not seed noise: the two HV bests differ by only 0.0103 and the two
+HL bests by 0.0071, so the effect is 3.3-3.6× the observed seed spread.
 
-HL is ahead at **every** checkpoint from 3000 to 15000 — by up to −0.23, far
-larger than the −0.034 best-val gap — and only crosses above HV in the last
-~4000 steps. So HL is *more* robust through the region that matters and its
-larger "degradation past best" number is an artifact of being measured from a
-lower floor while ending marginally worse at step ~20000, i.e. ~40 epochs deep
-into a regime no production run would occupy.
+**P3 (drop_frac < 0.01): PASS.** Max 0.00244 across all four runs, 4-20× under
+threshold. No routing collapse, so the comparison reflects architecture rather
+than a silently gutted sparse FFN.
 
-The honest reading: the epoch-regularizer effect (dense rounds 7/9/11, where
-degradation was cleanly param-ordered) **does not reproduce as an endpoint
-statistic on this backbone**, while the thing it was a proxy for — staying
-better for longer under repetition — does hold and then some. P4 should be
-restated for future rungs as *area between the curves past best*, or degradation
-at a fixed sensible horizon (e.g. 2× best-step), not distance to a step-20000
-endpoint that both arms have long since abandoned.
+**P4 (HL degradation ≤ HV): FAILS as written, on both seeds — and the metric is
+wrong, identically on both.** HL "degrades" more (+2.955/+2.924 vs
++2.742/+2.736), but the endpoint statistic contradicts the entire curve:
 
-Not calling G1 on one seed: seed 13 is running for both arms (~5h). If it
-reproduces P1 at a similar margin, G1 passes on the criteria that matter
-(P1/P2/P3) with P4 formally failed and explained.
+| step | s7 HL−HV | s13 HL−HV |
+|------|----------|-----------|
+| 1000 | +0.022 | +0.029 |
+| 3000 | −0.033 | −0.043 |
+| 4000 | −0.118 | −0.110 |
+| 6000 | −0.181 | −0.221 |
+| 10000 | **−0.235** | **−0.257** |
+| 15000 | −0.036 | −0.066 |
+| 19750 | +0.170 | +0.140 |
+
+HL is ahead at **all 49 measured points from 3000 to 15000 on both seeds**
+(mean −0.173 and −0.183 — five times the best-val gap), and does not cross back
+until step **16000/16250 of 20000**, i.e. past ~31 of 39 epochs. Its larger
+degradation number is an artifact of measuring distance from a lower floor to a
+worse endpoint that no production run would reach.
+
+Restated on horizons a real run would actually see, P4 is a wash rather than a
+loss: degradation at 2× best-step is HL +0.449 vs HV +0.481 on seed 7 (HL
+better) and HL +0.490 vs HV +0.419 on seed 13 (HV better) — the two seeds
+disagree, so there is no effect at that horizon in either direction.
+
+Honest conclusion: the dense rungs' epoch-regularizer effect (rounds 7/9/11,
+where degradation past best was cleanly param-ordered) **does not reproduce on
+this backbone as an endpoint statistic**, and reproduces as neither-arm-wins at
+a sane horizon. What does reproduce, larger than anywhere in the dense
+campaign, is the loop staying better for longer under repetition. Future rungs
+should pre-register P4 as *mean gap over the post-best region* or *degradation
+at 2× best-step*, never distance to a fixed terminal step.
+
+**G1: PASS** on P1/P2/P3 — the three predictions that gate the pilot — with P4
+failed as written and explained above. The loop flip therefore holds on the
+backbone the field converged on (Mamba-2 SSD state mixer + GQA retriever +
+fine-grained MoE with shared expert and aux-loss-free balancing), not just on
+dense stacks.
+
+Cost: **$0** — ran entirely on the already-paid-for L40S, ~11.7h wall.
+
+### What G1 does and does not clear
+
+Cleared: the loop × hybrid-MoE combination is not broken, so the pilot does not
+have to drop one of the two.
+
+**Not cleared — round 16 is still gated, and G1 does not change the arithmetic
+that matters.** Two independent reasons to hold:
+
+1. **Scale.** G1 is at d=768 with params-per-unique ≈16. Round 14's T1 measured
+   the loop *losing* at 1B with that ratio at 4.2-6.7, and the gap frozen across
+   5→8 epochs. G1 says the backbone is fine; it says nothing about the 1B
+   regime, which is exactly where the dense flip died. `run_round16.sh` still
+   refuses to run without an explicit STEPS decision for this reason.
+2. **Evals, not loss.** Every number above is validation loss. T1 and T2 both
+   showed loss and evals disagreeing — T1's 8-epoch extension *reversed* sign on
+   evals, and T2's V_nophil won on loss while losing on evals. Per the owner's
+   rule, G1's loss-only PASS is suggestive, not decisive. Running the eval suite
+   on the four r15 best-checkpoints is free (L40S, ~1h) and should happen before
+   any 1B spend.
+
+Recommendation: run the r15 evals first (free), and treat the T1 ratio problem
+as the real gate on round 16. Owner approval still required for any spend.
 
 Also instrumented (off by default): expert overlap between consecutive
 applications of a looped block. A looped MoE block reuses its router, so it
