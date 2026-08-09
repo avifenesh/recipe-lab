@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/L_std_ext8_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.404,
+  "piqa": 0.696,
+  "arc_easy": 0.5298,
+  "arc_challenge": 0.3144,
+  "winogrande": 0.499,
+  "boolq": 0.587,
+  "sciq": 0.608,
+  "lambada": 0.315,
+  "mean": 0.4941
+ }
+}

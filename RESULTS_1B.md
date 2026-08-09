@@ -120,10 +120,12 @@ Two of four cells complete, two still training at time of writing
 | V_cur4 (thinking stage) | 2.6971 | .4961 | .288 | .531 | .607 | **.711** |
 | V_std (5ep reference) | 2.7062 | .4870 | .304 | **.541** | .620 | .690 |
 
-## T1 — does 8 epochs flip the loop? NO — the gap is FROZEN
+## T1 — does 8 epochs flip the loop? NO, and on evals it moves BACKWARD
 
 Both arms extended 5 -> 8 epochs from `ext_base 28001` under identical
 `--steps 45840 --lr 6e-4 --warmup 1000`, so the treatment is matched.
+
+Loss — the gap is frozen:
 
 | arm | 5-epoch best | 8-epoch best | extension gain |
 |-----|--------------|--------------|----------------|
@@ -131,23 +133,41 @@ Both arms extended 5 -> 8 epochs from `ext_base 28001` under identical
 | L_std | 2.7497 | 2.7172 | −0.0325 |
 | **L − V** | **+0.0425** | **+0.0429** | — |
 
-The interesting result is not that the loop lost; it is that **the gap did
-not move**. Extra epochs bought both architectures the same −0.032, so at
-1B the loop's parameter deficit is not being repaid by repetition at all
-over this range. The flip's precondition is a high params-per-unique ratio,
-and going 5 -> 8 epochs on a 3B unique pool (ratio 4.2 -> 6.7) does not
-reach it.
+Evals (1000/task, 8 tasks) — and here the sign REVERSES:
 
-This bounds the boundary from above rather than locating it: at 1B the flip
-needs materially more repetition than 8 epochs, not slightly more. The
-practical consequence for the pilot is that **more epochs is the wrong knob**
-— a smaller unique pool at the same token budget is the direction that
-actually raises the ratio, and `run_round16.sh` is written to demand that
-decision explicitly instead of defaulting to 8 epochs.
+| arm | 5-epoch mean | 8-epoch mean | extension gain |
+|-----|--------------|--------------|----------------|
+| V_std | .4870 | **.5013** | **+1.4pt** |
+| L_std | .4974 | .4941 | **−0.3pt** |
+| **L − V** | **+1.0pt (loop AHEAD)** | **−0.7pt (loop behind)** | — |
+
+Two findings, and the second is the one that matters:
+
+1. **On loss the gap did not move.** Extra epochs bought both architectures
+   the same −0.032, so repetition is not repaying the loop's parameter
+   deficit over this range. Going 5 -> 8 epochs on a 3B unique pool only
+   moves params-per-unique 4.2 -> 6.7, far from the ~16 where the flip
+   verified at d=768. More epochs is the wrong knob; a smaller unique pool
+   is the direction that raises the ratio.
+
+2. **On evals the extension actively hurt the loop.** At 5 epochs L_std beat
+   V_std on suite mean (+1.0pt) *while losing on loss by 0.0425* — another
+   instance of loss and evals disagreeing, in the loop's favour this time.
+   The extension flipped that to −0.7pt: V gained +1.4pt (boolq .491 ->
+   .571 carries most of it) while L lost 0.3pt. So the 8-epoch extension did
+   not merely fail to flip the loop, it **cost the loop the eval lead it
+   already had at 5 epochs**.
+
+Per the owner's rule that evals decide and loss does not, the operative T1
+answer is: **at 1B, 5 epochs is where the loop looks best, and pushing to 8
+degrades it.** Any 1B-scale loop run should therefore be evaluated at 5
+epochs, not extended. Treat the single-cell boolq swing (+8pt) with care —
+2-choice task, 1000 samples — but the direction is consistent across the
+suite mean and is the opposite of what the loss curve implies.
 
 Sub-1B rungs remain unaffected: the flip verified 3/3 seeds at d=768 (~20
-epochs, ratio ~16) and 2/2 at d=1024/d=1536. The scale ceiling on this
-recipe is now measured on both sides.
+epochs, ratio ~16) and 2/2 at d=1024/d=1536, with downstream suites carrying
+the loss ordering there. The ceiling is now measured on both sides.
 
 ## T2 — does philosophy actually do anything? YES, and it trades
 
