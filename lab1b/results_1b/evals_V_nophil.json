@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/V_nophil_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.393,
+  "piqa": 0.694,
+  "arc_easy": 0.5596,
+  "arc_challenge": 0.3144,
+  "winogrande": 0.502,
+  "boolq": 0.589,
+  "sciq": 0.636,
+  "lambada": 0.336,
+  "mean": 0.503
+ }
+}
