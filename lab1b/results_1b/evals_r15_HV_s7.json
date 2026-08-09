@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/r15_HV_s7_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.292,
+  "piqa": 0.53,
+  "arc_easy": 0.3281,
+  "arc_challenge": 0.2475,
+  "winogrande": 0.491,
+  "boolq": 0.517,
+  "sciq": 0.351,
+  "lambada": 0.031,
+  "mean": 0.3484
+ }
+}

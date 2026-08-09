@@ -437,6 +437,45 @@ that matters.** Two independent reasons to hold:
 Recommendation: run the r15 evals first (free), and treat the T1 ratio problem
 as the real gate on round 16. Owner approval still required for any spend.
 
+### Eval-readout decision, pre-registered before seeing the comparison
+
+The r15 eval suite is running on all four best-checkpoints (free, L40S, ~30 min
+each). The first result (HV_s7, mean **.3484**) exposes a measurement problem
+that has to be settled *before* the arms are compared, so it is recorded here
+first:
+
+| task | HV_s7 | chance | above chance |
+|------|-------|--------|--------------|
+| sciq | .351 | .25 | +.101 |
+| arc_easy | .328 | .25 | +.078 |
+| hellaswag | .292 | .25 | +.042 |
+| lambada | .031 | .00 | +.031 |
+| piqa | .530 | .50 | +.030 |
+| boolq | .517 | .50 | +.017 |
+| arc_challenge | .247 | .25 | **−.003 (at chance)** |
+| winogrande | .491 | .50 | **−.009 (at chance)** |
+
+This is the expected consequence of the regime, not a bug: these are 0.31B and
+0.20B models trained on 12.5M unique tokens, deliberately data-starved to create
+the high params-per-unique ratio the flip needs. They have almost no world
+knowledge, so a suite built for 1B-scale models sits near its floor.
+
+**arc_challenge and winogrande are at chance and therefore contribute only
+noise to the suite mean.** Including them would let a ±2pt coin-flip on two dead
+tasks swamp a real signal on the five live ones. So the r15 eval readout will be
+reported on the **5 tasks with signal above chance** (sciq, arc_easy, hellaswag,
+lambada, piqa), with the full 8-task mean also shown for continuity but not used
+as the decision statistic.
+
+Stating this now, from the first checkpoint only, so the choice cannot be fitted
+to the HL-vs-HV outcome once all four land. boolq (+.017) is a marginal call and
+is kept in the 8-task figure but excluded from the 5-task readout.
+
+Note also that a near-floor suite is *weak evidence either way* at this scale.
+If the 5-task readout is ambiguous, the correct conclusion is "evals cannot
+resolve G1 at d=768/12.5M", not "evals refute the loss result" — the honest
+follow-up then is the 1B rung's own evals, not a louder claim from this one.
+
 Also instrumented (off by default): expert overlap between consecutive
 applications of a looped block. A looped MoE block reuses its router, so it
 can re-pick the same experts every application — a degenerate loop that loss
