@@ -104,3 +104,93 @@ small scale before any 1B spend.
 
 ~13.4h/run × 4 runs + probe + evals across 4 spot instances ≈ **$1.15-1.3K**
 (vs $4-5K original spec estimate; parallel fleet added ~$50 overlap).
+
+---
+
+# Round 14 — owner's four targets (2026-08-08/09)
+
+Two of four cells complete, two still training at time of writing
+(`L_std_ext8` on boxE, `L_cur4` on boxL). Loss table, best val_web:
+
+| cell | loss | eval mean | arc_challenge | winogrande | sciq | piqa |
+|------|------|-----------|---------------|------------|------|------|
+| V_std_ext8 (8 epochs) | **2.6743** | pending | | | | |
+| V_nophil | 2.6907 | .5030 | .314 | .502 | **.636** | .694 |
+| V_cur (5ep reference) | 2.6969 | **.5051** | **.334** | .530 | .607 | .706 |
+| V_cur4 (thinking stage) | 2.6971 | .4961 | .288 | .531 | .607 | **.711** |
+| V_std (5ep reference) | 2.7062 | .4870 | .304 | **.541** | .620 | .690 |
+
+## T1 — does 8 epochs flip the loop? (partial)
+
+`V_std_ext8` reaches **2.6743**, a 0.032 gain over its own 5-epoch best
+(2.7063) — so more epochs clearly still help the vanilla arm at 1B, and the
+data wall is not yet binding at 5 epochs. `L_std_ext8` must land below
+2.6743 to flip. It started the extension from 2.7487 and was at 2.7471 by
+step 41000 of 45840, so on the current trajectory **the flip does not
+happen at 8 epochs at 1B** — the cosine tail is where the remaining gain
+lands, and it would need ~0.07 from it. Verdict recorded when the run ends.
+
+Fairness check: both arms resumed from `ext_base 28001` with identical
+`--steps 45840 --lr 6e-4 --warmup 1000`, so the extension treatment is
+matched. (The `config.steps 28650` inside the JSONs is the inherited log
+dict from the original 5-epoch run, not the schedule that ran.)
+
+## T2 — does philosophy actually do anything? YES, and it trades
+
+`V_nophil` (philosophy swapped for extra web at matched budget) beat
+`V_cur` **on loss** (2.6907 vs 2.6969) and **lost on evals**
+(.5030 vs .5051). The split is legible and directional:
+
+- philosophy **buys reasoning**: arc_challenge .334 vs .314, winogrande
+  .530 vs .502
+- philosophy **costs facts**: sciq .607 vs .636
+
+This is the campaign's cleanest demonstration that **loss is the wrong
+decision metric** — loss preferred the arm with worse reasoning. It is also
+the strongest existing support for the owner's thesis that philosophy is
+where reasoning-in-language comes from, at the cost of factual density.
+
+## T3 — reasoning traces as a pretraining stage? NO
+
+`V_cur4` (math → philosophy → 200M reasoning traces → web) matched V_cur on
+loss (2.6971 vs 2.6969) and **lost on evals** (.4961 vs .5051), with
+arc_challenge collapsing to **.288** — the worst of any V cell, below even
+V_std's .304. piqa was the best of all cells (.711), so the traces did
+something, just not reasoning transfer.
+
+Reading: reasoning traces are instruction/solution-shaped text, and putting
+them mid-pretraining before the web stage buys style rather than capability,
+then gets partially overwritten. **Reasoning traces belong in
+post-training**, which is where SPEC_PILOT_MOE puts them. T4 (`L_cur4`)
+tests whether a looped model, which spends more compute per token, changes
+that verdict.
+
+## T4 — loop × thinking
+
+Pending (`L_cur4`, boxL, ~step 23000/30500).
+
+# Round 15 — hybrid-MoE sign-check (running, 2026-08-09)
+
+Gate G1 of SPEC_PILOT_MOE, on the free L40S: does the loop flip survive the
+move to the backbone the field converged on (Mamba-2 SSD state mixer + GQA
+retriever + fine-grained MoE)? HV vs HL, 15 applications each with matched
+attention placement, in the exact regime the dense flip verified 3/3 seeds
+(d=768, 12.5M unique tokens, ~19.6 epochs, lr 6e-4). Predictions P1-P4
+pre-registered in `lab1b/run_round15.sh`.
+
+Arch bugs found and fixed while building it, both of which pass a
+forward-only check and would have silently wasted a p5 run:
+
+1. `torch.where` for the SSD non-causal mask still differentiates the
+   untaken branch, whose exponents overflow to `inf`, so gradients were
+   `inf*0 = NaN` while the printed loss looked healthy. Multiplicative
+   masking fixed it; `test_ssd_grads_finite` guards it.
+2. The MoE load buffer was overwritten per micro-batch, so with grad-accum
+   the balancer saw `1/accum` of the routing and stalled at a **~20% token
+   drop rate** — a quietly gutted sparse FFN. Counts now accumulate across
+   the whole optimizer step; drop_frac falls 0.062 → 0.000 by step 100.
+
+Also instrumented (off by default): expert overlap between consecutive
+applications of a looped block. A looped MoE block reuses its router, so it
+can re-pick the same experts every application — a degenerate loop that loss
+would not reveal. Untested in any prior work; measured before the pilot.
