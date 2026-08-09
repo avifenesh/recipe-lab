@@ -112,14 +112,24 @@ def test_moe_routing():
     assert abs(ffn.load.sum().item() - 1.0) < 1e-5, ffn.load.sum()
     print(f"  moe forward OK, drop_frac={ffn.drop_frac.item():.4f}")
 
-    # the balancer must push the bias against overload
-    ffn.load.zero_()
-    ffn.load[0] = 1.0
+    # the balancer must push the bias against overload, and consume its counts
+    ffn.load_count.zero_()
+    ffn.load_count[0] = 100.0
+    ffn.route_count.fill_(100.0)
     before = ffn.expert_bias.clone()
     ffn.rebalance(1e-2)
     assert ffn.expert_bias[0] < before[0], "overloaded expert bias must drop"
     assert ffn.expert_bias[1] > before[1], "idle expert bias must rise"
+    assert ffn.route_count.item() == 0, "counts must reset after rebalance"
     print("  moe aux-loss-free balancer OK")
+
+    # counts must accumulate across micro-batches, not overwrite
+    ffn.rebalance(0.0)
+    for _ in range(3):
+        ffn(x)
+    assert ffn.route_count.item() == 3 * 4 * 16 * cfg.n_expert_active, \
+        ffn.route_count.item()
+    print("  moe load accumulates over micro-batches OK")
 
     # capacity drop must still return finite output for every token
     cfg2 = ConfigMoE(d_model=32, n_expert=4, n_expert_active=1, d_expert=8,

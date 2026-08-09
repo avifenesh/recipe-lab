@@ -58,8 +58,8 @@ class ConfigMoE:
     n_expert_active: int = 10
     n_shared_expert: int = 1
     d_expert: int = 256
-    capacity_factor: float = 1.25
-    bias_update_rate: float = 1e-3   # aux-loss-free balancing step
+    capacity_factor: float = 2.0     # measured: 1.25 dropped ~20% of routes
+    bias_update_rate: float = 1e-2   # aux-loss-free balancing step
     # --- stack / loop schedule ---
     n_group: int = 5            # groups of [s,s,s,s,a] applications
     ssm_per_group: int = 4      # linear applications per attention application
@@ -254,7 +254,13 @@ class MoEFFN(nn.Module):
             self.s3 = nn.Linear(d, ds, bias=False)
             self.s2 = nn.Linear(ds, d, bias=False)
         self.register_buffer("expert_bias", torch.zeros(E), persistent=True)
-        self.register_buffer("load", torch.zeros(E), persistent=False)
+        # counts accumulate across micro-batches: with grad-accum the balancer
+        # must see the whole optimizer step's routing, not just the last micro
+        # batch (1/accum of the tokens made it chase noise and stall at a ~20%
+        # drop rate). rebalance() consumes and clears them.
+        self.register_buffer("load_count", torch.zeros(E), persistent=False)
+        self.register_buffer("route_count", torch.zeros(()), persistent=False)
+        self.register_buffer("drop_count", torch.zeros(()), persistent=False)
         self.register_buffer("drop_frac", torch.zeros(()), persistent=False)
 
     def forward(self, x):
@@ -278,8 +284,10 @@ class MoEFFN(nn.Module):
         keep = rank < cap
 
         with torch.no_grad():
-            self.load.copy_(counts.float() / max(1, n * self.k))
-            self.drop_frac.copy_((~keep).float().mean())
+            self.load_count += counts.float()
+            self.route_count += n * self.k
+            self.drop_count += (~keep).sum().float()
+            self.drop_frac.copy_(self.drop_count / self.route_count.clamp(min=1))
 
         slot = torch.zeros(self.E * cap, device=x.device, dtype=torch.long)
         wslot = torch.zeros(self.E * cap, device=x.device, dtype=w.dtype)
@@ -304,13 +312,28 @@ class MoEFFN(nn.Module):
 
     @torch.no_grad()
     def rebalance(self, rate):
-        """Aux-loss-free step: overloaded experts get a lower selection bias."""
-        load = self.load
+        """Aux-loss-free step: overloaded experts get a lower selection bias.
+
+        Consumes the counts accumulated over this optimizer step's
+        micro-batches (and all ranks), then clears them.
+        """
+        counts, total = self.load_count, self.route_count.clone()
         if dist.is_available() and dist.is_initialized():
-            load = load.clone()
-            dist.all_reduce(load, op=dist.ReduceOp.AVG)
-        err = load - 1.0 / self.E
-        self.expert_bias -= rate * torch.sign(err)
+            counts = counts.clone()
+            dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total, op=dist.ReduceOp.SUM)
+        if total.item() > 0:
+            load = counts / total
+            err = load - 1.0 / self.E
+            self.expert_bias -= rate * torch.sign(err)
+        self.load_count.zero_()
+        self.route_count.zero_()
+        self.drop_count.zero_()
+
+    @property
+    def load(self):
+        """Share of routes each expert took since the last rebalance."""
+        return self.load_count / self.route_count.clamp(min=1)
 
 
 class HybridBlock(nn.Module):
