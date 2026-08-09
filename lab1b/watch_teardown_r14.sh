@@ -8,7 +8,11 @@ mkdir -p "$DEST"
 declare -A BOXES=(
   # boxE (i-0d957666ce29242dc) torn down 2026-08-09 02:52 after L_std_ext8
   # finished and both 8-epoch eval suites validated.
-  ["18.219.6.126"]="i-00b627d9917dcfc57"
+  # boxL moved 18.219.6.126 -> 3.16.54.79 after its host went impaired at
+  # ~03:06 and it was stop/started onto fresh hardware (see RESULTS_1B.md
+  # incidents log). Same instance id: the root volume, and L_cur4's step-28000
+  # checkpoint on it, survived the migration.
+  ["3.16.54.79"]="i-00b627d9917dcfc57"
 )
 while [ ${#BOXES[@]} -gt 0 ]; do
   sleep 300

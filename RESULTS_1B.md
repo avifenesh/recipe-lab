@@ -99,6 +99,29 @@ small scale before any 1B spend.
    instead of tearing down eval-less. Gate design validated in production.
 4. ISP IP rotation twice broke SSH mid-run (SG allowlist) — not a training
    event; boxes unaffected.
+5. **boxL host went `impaired` at ~03:06 on 2026-08-09, mid-L_cur4 @step
+   28000/30500 (92% done).** Not a spot reclaim — the request stayed
+   `active/fulfilled` — and not the ISP-rotation failure mode either: the
+   operator IP was still allowlisted and the SG unchanged. Both instance and
+   system status checks read `impaired` with port 22 dead, while console
+   output showed a clean 21:16 boot and nothing since, i.e. the host severed
+   the instance rather than the guest crashing. Diagnosis order that mattered:
+   check spot-request state and own public IP *before* touching the box, since
+   the two cheap explanations look identical from a timed-out SSH.
+   Recovery: root volume had `DeleteOnTermination=False`, so a stop/start
+   migrates to fresh hardware with the checkpoint intact. Took a snapshot
+   (`snap-049f3e04c344609ed`) first as insurance independent of the
+   instance's fate. The forced stop took ~16 min (expected for a wedged
+   host). `start-instances` first failed with `IncorrectSpotRequestState`
+   because a persistent request parks as `disabled /
+   instance-stopped-by-user` after an operator stop; it succeeded on retry
+   once the request settled. Box came back on a new IP (3.16.54.79),
+   **resumed from step 28001 with zero steps lost**. The on-box eval watcher
+   died with the host and had to be relaunched by hand — worth noting, since
+   the teardown gate depends on it and a silently dead watcher means a box
+   that trains, finishes, and then idles at ~$20/h.
+   Rule added: pause the teardown watcher during any recovery on a persistent
+   spot request, or it can reap a box that is mid-migration.
 
 ## Cost
 
