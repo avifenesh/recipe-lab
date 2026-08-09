@@ -4,3 +4,4 @@ __pycache__/
 venv/
 *.log
 lab1b/results_1b/*.pt
+lab1b/results_1b/.*.pt.*

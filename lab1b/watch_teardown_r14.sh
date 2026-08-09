@@ -6,7 +6,8 @@ KEY=~/.ssh/fpv-drone-audio-train-20260701.pem
 DEST=/home/avifenesh/projects/recipe-lab/lab1b/results_1b
 mkdir -p "$DEST"
 declare -A BOXES=(
-  ["3.136.97.145"]="i-0d957666ce29242dc"
+  # boxE (i-0d957666ce29242dc) torn down 2026-08-09 02:52 after L_std_ext8
+  # finished and both 8-epoch eval suites validated.
   ["18.219.6.126"]="i-00b627d9917dcfc57"
 )
 while [ ${#BOXES[@]} -gt 0 ]; do
