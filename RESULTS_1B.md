@@ -120,20 +120,34 @@ Two of four cells complete, two still training at time of writing
 | V_cur4 (thinking stage) | 2.6971 | .4961 | .288 | .531 | .607 | **.711** |
 | V_std (5ep reference) | 2.7062 | .4870 | .304 | **.541** | .620 | .690 |
 
-## T1 — does 8 epochs flip the loop? (partial)
+## T1 — does 8 epochs flip the loop? NO — the gap is FROZEN
 
-`V_std_ext8` reaches **2.6743**, a 0.032 gain over its own 5-epoch best
-(2.7063) — so more epochs clearly still help the vanilla arm at 1B, and the
-data wall is not yet binding at 5 epochs. `L_std_ext8` must land below
-2.6743 to flip. It started the extension from 2.7487 and was at 2.7471 by
-step 41000 of 45840, so on the current trajectory **the flip does not
-happen at 8 epochs at 1B** — the cosine tail is where the remaining gain
-lands, and it would need ~0.07 from it. Verdict recorded when the run ends.
+Both arms extended 5 -> 8 epochs from `ext_base 28001` under identical
+`--steps 45840 --lr 6e-4 --warmup 1000`, so the treatment is matched.
 
-Fairness check: both arms resumed from `ext_base 28001` with identical
-`--steps 45840 --lr 6e-4 --warmup 1000`, so the extension treatment is
-matched. (The `config.steps 28650` inside the JSONs is the inherited log
-dict from the original 5-epoch run, not the schedule that ran.)
+| arm | 5-epoch best | 8-epoch best | extension gain |
+|-----|--------------|--------------|----------------|
+| V_std | 2.7062 | **2.6743** | −0.0320 |
+| L_std | 2.7497 | 2.7172 | −0.0325 |
+| **L − V** | **+0.0425** | **+0.0429** | — |
+
+The interesting result is not that the loop lost; it is that **the gap did
+not move**. Extra epochs bought both architectures the same −0.032, so at
+1B the loop's parameter deficit is not being repaid by repetition at all
+over this range. The flip's precondition is a high params-per-unique ratio,
+and going 5 -> 8 epochs on a 3B unique pool (ratio 4.2 -> 6.7) does not
+reach it.
+
+This bounds the boundary from above rather than locating it: at 1B the flip
+needs materially more repetition than 8 epochs, not slightly more. The
+practical consequence for the pilot is that **more epochs is the wrong knob**
+— a smaller unique pool at the same token budget is the direction that
+actually raises the ratio, and `run_round16.sh` is written to demand that
+decision explicitly instead of defaulting to 8 epochs.
+
+Sub-1B rungs remain unaffected: the flip verified 3/3 seeds at d=768 (~20
+epochs, ratio ~16) and 2/2 at d=1024/d=1536. The scale ceiling on this
+recipe is now measured on both sides.
 
 ## T2 — does philosophy actually do anything? YES, and it trades
 
