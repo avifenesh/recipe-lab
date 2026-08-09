@@ -27,7 +27,7 @@ if [ ! -f "$out" ]; then
     --arm HV --size b --order cur --data-dir data1b_p \
     --steps 28650 --lr 6e-4 --warmup 2000 --micro-bs 2 --grad-accum 8 \
     --eval-every 1000 --ckpt-every 2000 \
-    --ckpt ckpts/r16p_HV_cur.pt --out "$out" 2>&1 | tail -2
+    --ckpt ckpts/r16p_HV_cur.pt --out "$out"
 fi
 python eval_moe.py --ckpt ckpts/r16p_HV_cur_best.pt \
   --out evals_r16p_HV_cur.json --limit 1000 2>&1 | tail -3
