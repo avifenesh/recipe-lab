@@ -123,6 +123,42 @@ small scale before any 1B spend.
    Rule added: pause the teardown watcher during any recovery on a persistent
    spot request, or it can reap a box that is mid-migration.
 
+## Artifact status — two gaps, one of them a real loss (2026-08-09)
+
+Audited after the fleet came down, and the first item is a mistake worth
+naming rather than burying:
+
+**`V_std_best.pt` (5-epoch baseline weights) is gone from both local disk and
+HF.** It lived on the rescued volume that boxE mounted; when that box was torn
+down I pulled `evals_V_std.json` off it but never the weights. An earlier
+audit in this session reported it present because the glob `V_std*_best.pt`
+matched `V_std_ext8_best.pt` — a check that confirmed the wrong file.
+
+What survives for that cell: the full 8-task eval suite (mean .4870), the
+complete 57-point 5-epoch curve (best 2.7063, preserved inside
+`V_std_ext8.json` because the extension inherited the log), and the 8-epoch
+continuation weights. The 8-epoch weights cannot regenerate the 5-epoch ones —
+the extension resumed from step 28001 and overwrote forward.
+
+Recovery path: snapshot `snap-07ebb7d1de3fc90dd` (`completed`, described
+"recipe-lab-1b: V_std done, L_std @10000", from `vol-0535ab38485db1901`) should
+still contain it. Restore that snapshot to a volume, attach to any small
+instance, and copy the file out. **This is also why the orphaned-volume
+cleanup must not be run blind** — `vol-0535ab38485db1901` was in the batch I
+attempted to delete, and deleting it would have made this permanent.
+
+**Only 3 of 9 best-checkpoints are on HF** (`V_cur`, `L_cur`, `L_std`).
+Missing: `V_nophil`, `V_cur4`, `L_cur4`, `V_std_ext8`, `L_std_ext8` (all
+present locally and verified as intact archives) plus `V_std` (see above).
+Those five are currently single-copy on one machine. Upload is blocked on
+credentials, not effort: the token used for the original uploads lived in the
+environment of a p5 box that has since been torn down, and neither the local
+machine nor the fpv box has one cached. Needs the owner to supply a token.
+
+Lesson recorded: pull *weights* off a rescue volume at the same time as the
+JSONs, and verify artifact presence with exact filenames rather than globs
+that a sibling file can satisfy.
+
 ## Cost
 
 ~13.4h/run × 4 runs + probe + evals across 4 spot instances ≈ **$1.15-1.3K**
