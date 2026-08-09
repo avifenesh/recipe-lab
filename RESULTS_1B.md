@@ -140,10 +140,26 @@ complete 57-point 5-epoch curve (best 2.7063, preserved inside
 continuation weights. The 8-epoch weights cannot regenerate the 5-epoch ones —
 the extension resumed from step 28001 and overwrote forward.
 
-Recovery path: snapshot `snap-07ebb7d1de3fc90dd` (`completed`, described
-"recipe-lab-1b: V_std done, L_std @10000", from `vol-0535ab38485db1901`) should
-still contain it. Restore that snapshot to a volume, attach to any small
-instance, and copy the file out. **This is also why the orphaned-volume
+Recovery is staged and waiting on one approval. Snapshot
+`snap-07ebb7d1de3fc90dd` (`completed`, "recipe-lab-1b: V_std done, L_std
+@10000") has been restored to **`vol-02807be986503cd20`** (`available`, 400GB,
+us-east-2a, tagged `recipe-lab-V_std-recovery-20260809`) — the same AZ as the
+fpv box, so no new instance is needed.
+
+Remaining step, which needs the owner to name the target instance: attach that
+volume to fpv (`i-0dfdd059edcc3dec0`) and copy `ckpts/V_std_best.pt` off it.
+Attaching was deliberately not done unattended — fpv is mid-round-15 and is
+the machine currently producing the G1 evidence, so a device-mapping surprise
+there would cost more than the file is worth. Attaching to a fresh t3 instead
+is equally fine and avoids touching fpv at all.
+
+    aws ec2 attach-volume --region us-east-2 \
+      --volume-id vol-02807be986503cd20 --instance-id <target> --device /dev/sdp
+    # then on the box: mount the partition read-only, copy
+    # recipe-lab/lab1b/ckpts/V_std_best.pt, unmount, detach, delete the volume
+
+Note the restored volume costs ~$32/mo while it sits, so it should be deleted
+once the file is copied. **This is also why the orphaned-volume
 cleanup must not be run blind** — `vol-0535ab38485db1901` was in the batch I
 attempted to delete, and deleting it would have made this permanent.
 
