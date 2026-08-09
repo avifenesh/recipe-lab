@@ -476,6 +476,53 @@ If the 5-task readout is ambiguous, the correct conclusion is "evals cannot
 resolve G1 at d=768/12.5M", not "evals refute the loss result" — the honest
 follow-up then is the 1B rung's own evals, not a louder claim from this one.
 
+### Eval result — that ambiguous case is exactly what happened
+
+All four suites complete (1000 samples/task, free, L40S).
+
+| arm | sciq | arc_easy | hellaswag | lambada | piqa | 5-task | 8-task |
+|-----|------|----------|-----------|---------|------|--------|--------|
+| HV_s7 | .351 | .328 | .292 | .031 | .530 | .3064 | .3484 |
+| HL_s7 | .358 | .305 | .301 | .033 | .541 | **.3077** | .3278 |
+| HV_s13 | .340 | .307 | .288 | .033 | .536 | .3008 | .3200 |
+| HL_s13 | .341 | .305 | .283 | .023 | .523 | .2951 | .3364 |
+
+**5-task decision readout: the seeds disagree and the effect is inside the
+noise.** HL is +0.12pt on seed 7 and −0.57pt on seed 13, mean −0.23pt. The
+same-arm seed spread is 0.0056 (HV) and 0.0126 (HL) — *larger than the
+between-arm difference*. There is no eval signal here in either direction.
+
+**The 8-task mean flips sign between seeds** (−2.06pt then +1.64pt), and the
+cause is entirely boolq, which is bimodal at this scale: .517 / .375 / .376 /
+.495 across the four runs, i.e. the models are essentially answering all-yes or
+all-no on a 2-choice task. That is precisely the artifact the pre-registered
+5-task readout was written to exclude, and its behaviour here vindicates
+excluding it rather than being a reason to revisit the choice.
+
+**Verdict: evals cannot resolve G1 at d=768 / 12.5M unique tokens.** This is the
+outcome named in advance, so it is reported as such and not spun. Concretely:
+
+- The loss result stands on its own terms — −0.0340 and −0.0372, 2/2 seeds,
+  3.3-3.6× the loss seed spread, routers healthy.
+- The evals neither confirm nor contradict it. They are near their floor (3 of 8
+  tasks at chance, lambada at .03) because a 0.20-0.31B model trained on 12.5M
+  unique tokens has almost no world knowledge to test. The suite lacks the
+  resolution for a 0.03-nat loss difference.
+- **G1's status is therefore: PASS on loss, UNRESOLVED on evals.** Under the
+  owner's rule that evals decide, that is *not* a full pass, and it should not be
+  presented as one.
+
+What this changes for the pilot: G1 still does its job of ruling out the
+catastrophic case — loop × hybrid-MoE is not broken, so the pilot need not drop
+either half. It does not deliver positive eval evidence, and the only place that
+evidence can come from is a rung big enough for the suite to have signal. That
+is the 1B rung, which is also where T1 says the ratio problem lives.
+
+Recommendation unchanged and now better grounded: **round 16 stays gated.** If it
+runs, it must (a) fix the params-per-unique ratio rather than repeat T1's 5→8
+epoch mistake, and (b) be judged on its own evals, which at 1B do have signal —
+the dense 1B cells separated cleanly (V_cur .5051 vs V_std .4870).
+
 Also instrumented (off by default): expert overlap between consecutive
 applications of a looped block. A looped MoE block reuses its router, so it
 can re-pick the same experts every application — a degenerate loop that loss
