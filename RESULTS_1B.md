@@ -527,3 +527,29 @@ Also instrumented (off by default): expert overlap between consecutive
 applications of a looped block. A looped MoE block reuses its router, so it
 can re-pick the same experts every application — a degenerate loop that loss
 would not reveal. Untested in any prior work; measured before the pilot.
+
+# Data upgrade — philosophy pool rebuilt (2026-08-09)
+
+Owner redirect: the campaign's real winner is the curriculum (math →
+philosophy → world knowledge → agentic/thinking post-training), not the
+loop; the next rung compares curriculum-on-MoE, not architectures. The 1B
+factorial's philosophy stage was the starved one — it wanted 0.2B tokens
+against a 159M pool of pre-1928 Gutenberg. Rebuilt per SPEC_PILOT_MOE
+(`lab1b/prepare_phil_pool.py`, built on fpv in ~25 min, $0):
+
+| bin | source | tokens |
+|-----|--------|--------|
+| `phil_sep.bin` | SEP Dec-2023 scrape (dmarx), stubs <2000 chars dropped | 44.0M |
+| `phil_papers.bin` | PhilPapers open-access 2023-10-28 (malteos), English rows >5000 chars (~75% of rows are en) | 691.9M |
+| `phil_arxiv.bin` | proof-pile-2 arXiv joined on math.LO/cs.LO ids from the arXiv metadata snapshot (both old/new id spellings) | 600.0M (capped) |
+
+Total **1.336B modern philosophy/logic tokens** — 8.4× the old pool, all
+post-Gutenberg, kept as separate bins so stage mixes stay tunable. Same
+tokenizer/dtype contract as the 1B bins (GPT-2 BPE, uint16, EOT-joined).
+On fpv at `lab1b/data_phil/`, manifest checked against file sizes.
+
+Also located (stale note corrected): the darklanes SFT corpus IS generated —
+`~/projects/sft-traces`, 2,000 verified agentic traces (500 each of bug-fix /
+refactor / test-writing / explain, 1,482 tests_pass with zero-exit evidence,
+98.4% keep rate, $15 spent). The pilot's A1/A2 post-training data exists;
+only a tokenizer-specific re-convert is needed.
