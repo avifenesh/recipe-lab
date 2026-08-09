@@ -1,14 +1,13 @@
 #!/bin/bash
 # Round-14 standing watcher: pulls artifacts and tears down each box when it
 # flags READY_FOR_TEARDOWN. Cancel spot request BEFORE terminate.
+# IPs are the post-spot-resume ones (both boxes moved when capacity returned).
 KEY=~/.ssh/fpv-drone-audio-train-20260701.pem
 DEST=/home/avifenesh/projects/recipe-lab/lab1b/results_1b
 mkdir -p "$DEST"
 declare -A BOXES=(
-  ["18.218.44.221"]="i-0d957666ce29242dc"
-  ["18.117.222.152"]="i-03b1dc1acdb725cef"
-  ["3.17.161.100"]="i-00c7ff1142df6f6e7"
-  ["18.118.15.152"]="i-00b627d9917dcfc57"
+  ["3.136.97.145"]="i-0d957666ce29242dc"
+  ["18.219.6.126"]="i-00b627d9917dcfc57"
 )
 while [ ${#BOXES[@]} -gt 0 ]; do
   sleep 300
@@ -24,6 +23,12 @@ while [ ${#BOXES[@]} -gt 0 ]; do
       "ubuntu@$ip:~/recipe-lab/lab1b/evals_*.json" "$DEST/" 2>/dev/null
     rsync -az -e "ssh -o ConnectTimeout=20 -i $KEY" \
       "ubuntu@$ip:~/recipe-lab/lab1b/ckpts/*_best.pt" "$DEST/" 2>/dev/null
+    # only tear down if the artifacts actually landed locally
+    got=$(ls "$DEST"/evals_*.json 2>/dev/null | wc -l)
+    if [ "$got" -lt 1 ]; then
+      echo "WARN $ip flagged READY but no evals pulled — leaving box up"
+      continue
+    fi
     SIR=$(AWS_PROFILE=default aws ec2 describe-instances --region us-east-2 \
       --instance-ids $iid --query 'Reservations[].Instances[].SpotInstanceRequestId' --output text)
     [ -n "$SIR" ] && [ "$SIR" != "None" ] && \
