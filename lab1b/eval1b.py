@@ -83,7 +83,9 @@ def eval_lambada(model, cfg, rows):
     return correct / len(rows)
 
 
-def main():
+def main(loader=load_model):
+    """`loader` lets another architecture reuse this exact protocol — the
+    suite must be identical across arms for the numbers to be comparable."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--tasks", default="hellaswag,piqa,arc_easy,arc_challenge,"
@@ -93,7 +95,7 @@ def main():
     args = ap.parse_args()
 
     from datasets import load_dataset
-    model, cfg = load_model(args.ckpt)
+    model, cfg = loader(args.ckpt)
     results = {}
 
     def rows_of(ds):
