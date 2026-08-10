@@ -3,7 +3,9 @@
 # flags READY_FOR_TEARDOWN. Cancel spot request BEFORE terminate.
 KEY=~/.ssh/fpv-drone-audio-train-20260701.pem
 DEST=/home/avifenesh/projects/recipe-lab/lab1b/results_1b
-IP=18.219.42.215
+# IP moved 18.219.42.215 -> 13.59.82.196 after the 09:32Z spot interruption
+# (capacity-not-available ~3.5h); same instance id, root volume survived.
+IP=13.59.82.196
 IID=i-06af18789e8e85239
 mkdir -p "$DEST"
 while true; do
