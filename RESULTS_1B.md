@@ -553,3 +553,48 @@ Also located (stale note corrected): the darklanes SFT corpus IS generated —
 refactor / test-writing / explain, 1,482 tests_pass with zero-exit evidence,
 98.4% keep rate, $15 spent). The pilot's A1/A2 post-training data exists;
 only a tokenizer-specific re-convert is needed.
+
+# Round 16p — HV_cur on the upgraded phil pool (2026-08-11, CLOSED)
+
+Owner-approved single run: HV hybrid-MoE (1.316B total / 0.412B active) on
+the cur curriculum with the rebuilt philosophy stage (600M modern
+SEP+PhilPapers replacing 159M pre-1928 Gutenberg; math 600M, web 1800M,
+3.0B unique, 5 epochs, 28650 steps — the dense factorial's exact regime).
+One spot interruption (3.5h capacity wait, resumed step 18001, replayed
+val within 0.0006 — determinism receipt). Total ~30 box-hours ≈ $610.
+Best val_web **2.8142** @27000. No router collapse: drop_frac ≤0.005
+mid-stage; the only >0.01 readings (0.0133/0.0115/0.0129) were web→math
+stage-boundary transients that resolved to <0.001 by the next record.
+
+Eval readout (1000/task) vs dense V_cur, the campaign's best cell:
+
+| task | HV_cur (0.41B act) | V_cur (1.30B dense) | Δ |
+|------|-------|-------|---|
+| hellaswag | .378 | .402 | −2.4 |
+| piqa | .664 | .706 | −4.2 |
+| arc_easy | .5053 | .5228 | −1.8 |
+| arc_challenge | .2977 | .3344 | −3.7 |
+| winogrande | .503 | .530 | −2.7 |
+| boolq | **.607** | .589 | +1.8 |
+| sciq | .564 | .607 | −4.3 |
+| lambada | .320 | .350 | −3.0 |
+| **mean** | **.4799** | **.5051** | **−2.5pt** |
+
+Honest read — this comparison moves TWO variables (backbone AND phil pool),
+so it attributes nothing by itself:
+
+- The −2.5pt eval / +0.117 loss deficit is consistent with the **3.2× active-
+  param gap** (0.41B vs 1.30B): sparse active compute costs quality at
+  matched total params. That is the known MoE trade, not a curriculum verdict.
+- What the run DOES establish: the hybrid-MoE backbone trains stably for a
+  full 1B-scale curriculum run (15B tokens, zero NaN, balancer healthy at
+  56 experts, spot-resume exact), and the upgraded phil pool is drop-in.
+- What it CANNOT establish: whether the new phil pool beats the old one
+  (needs same-arch control: dense V_cur on data1b_p, or HV_cur on old
+  data1b), or whether MoE-at-matched-active-compute is competitive (needs a
+  dense ~0.4B control).
+- boolq +1.8 is the lone gain; with boolq's known bimodality (R15) it
+  carries no weight alone.
+
+Cheapest attribution run if wanted next: dense V_cur retrained on data1b_p
+(~$270 at dense speed) isolates the phil-pool effect exactly.
