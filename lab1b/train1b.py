@@ -36,6 +36,14 @@ STAGE_SETS = {
     "cur": ["stage1_math", "stage2_phil", "stage3_web"],
     "cur4": ["stage1_math", "stage2_phil", "stage25_think", "stage3_web"],
     "nophil": ["stage1_math", "stage3b_webx", "stage3_web"],
+    # order permutations (round 19+): same bins, different epoch-major order.
+    # pm: philosophy before math — is math-first load-bearing or is it just
+    # "abstract stages before web"?
+    "pm": ["stage2_phil", "stage1_math", "stage3_web"],
+    # wl (web-last control inverted): web FIRST, then math, then phil —
+    # maximally anti-curriculum while stage-sequential; separates "staging
+    # helps" from "THIS order helps".
+    "wl": ["stage3_web", "stage1_math", "stage2_phil"],
 }
 
 
