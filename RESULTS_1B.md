@@ -598,3 +598,62 @@ so it attributes nothing by itself:
 
 Cheapest attribution run if wanted next: dense V_cur retrained on data1b_p
 (~$270 at dense speed) isolates the phil-pool effect exactly.
+
+# Round 17 — phil-pool attribution (2026-08-11, CLOSED)
+
+The single-variable control round 16p needed: dense V 1.30B, cur order,
+identical to the factorial's V_cur cell except `--data-dir data1b_p`
+(600M modern SEP+PhilPapers phil replacing 159M Gutenberg; web trimmed
+2.25B→1.8B to hold 3.0B unique). One spot interruption (~2.5h wait,
+resumed step 21001 from the periodic ckpt, zero steps lost). ~$300.
+Best val_web 2.7252 @27000 vs V_cur 2.6969 (+0.028 — but T2 already
+proved loss picks the wrong arm on philosophy; evals decide).
+
+## Verdict: the upgraded phil pool LOSES on evals — new pool −2.3pt
+
+| task | V_cur_p | V_cur | Δ phil-pool |
+|------|---------|-------|---|
+| hellaswag | .405 | .402 | +0.3 |
+| piqa | .670 | .706 | −3.6 |
+| arc_easy | .5053 | .5228 | −1.8 |
+| arc_challenge | .2943 | .3344 | **−4.0** |
+| winogrande | .511 | .530 | −1.9 |
+| boolq | .555 | .589 | −3.4 |
+| sciq | .596 | .607 | −1.1 |
+| mean | **.4821** | **.5051** | **−2.3pt** |
+
+The T2 prediction FAILED: modern academic philosophy did not buy
+reasoning — arc_challenge (−4.0) and winogrande (−1.9) are among the
+LARGEST losses, exactly the tasks the phil stage was supposed to feed.
+The T2 result (phil > no-phil) came from GUTENBERG philosophy — classic
+primary texts (argumentative prose, dialogues). The replacement pool is
+PhilPapers open-access papers + SEP: modern academic register, citation
+apparatus, LaTeX-flavored arXiv logic. Same stage budget, 3.8× the
+unique tokens, worse result on every reasoning task. **The pool's
+REGISTER matters more than its size or recency.** "More/newer
+philosophy" is not the knob; "primary argumentative prose" apparently is.
+
+## Bonus: r16p reread — the MoE backbone is nearly free at matched data
+
+With r17 as the matched-data dense control, r16p's gap decomposes:
+
+| | eval mean | active params |
+|---|---|---|
+| V_cur_p (dense, new phil) | .4821 | 1.30B |
+| HV_cur_p (MoE, new phil) | .4799 | 0.41B |
+
+**−0.2pt for 3.2× fewer active params.** The −2.5pt I attributed partly
+to sparse compute was almost entirely the phil-pool regression. The
+hybrid-MoE backbone at 0.41B active matches dense 1.30B on this suite —
+strong support for the pilot's MoE architecture choice.
+
+## What this changes for the pilot
+
+1. **Data plan REVISED**: keep Gutenberg-register philosophy as the
+   stage core; SEP/PhilPapers at most a minority mix — never a swap.
+   An A/B mix rung (e.g. 150M Gutenberg + 150M SEP) is the cheap probe
+   if we want to salvage the modern pool.
+2. **Architecture CONFIRMED**: hybrid-MoE carries dense-level evals at
+   ~1/3 active compute in the exact pilot regime.
+3. SPEC_PILOT_MOE's data table needs the phil row rewritten (it
+   currently recommends exactly the swap that just lost).
