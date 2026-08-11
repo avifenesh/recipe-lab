@@ -154,6 +154,13 @@ def main():
     ap.add_argument("--batch-size", type=int, default=24)
     ap.add_argument("--block-size", type=int, default=1024)
     ap.add_argument("--lr", type=float, default=6e-4)
+    ap.add_argument("--opt", choices=("adamw", "muon"), default="adamw",
+                    help="muon = torch.optim.Muon on 2D hidden matrices, "
+                         "AdamW on embeddings/norms/scalars (standard split); "
+                         "--lr drives AdamW, muon group uses --muon-lr")
+    ap.add_argument("--muon-lr", type=float, default=2e-2,
+                    help="lr for the Muon matrix group (Muon lrs live on a "
+                         "different scale than AdamW's)")
     ap.add_argument("--warmup", type=int, default=200)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--data", default="data/fineweb_train.bin")
@@ -180,14 +187,33 @@ def main():
     train_data = np.memmap(args.data, dtype=np.uint16, mode="r")
     val_data = np.memmap(args.val_data, dtype=np.uint16, mode="r")
 
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr,
-                            betas=(0.9, 0.95), weight_decay=0.1)
+    if args.opt == "muon":
+        # standard Muon split: orthogonalized updates for 2D hidden-layer
+        # matrices; embeddings (incl. tied head), norms, and scalar params
+        # (a_log/D/lam) stay on AdamW. match_rms_adamw makes the update RMS
+        # comparable to AdamW's so one cosine schedule can drive both groups.
+        emb = {id(model.tok_emb.weight), id(model.pos_emb.weight)}
+        mat = [p for p in model.parameters()
+               if p.ndim == 2 and id(p) not in emb]
+        rest = [p for p in model.parameters()
+                if p.ndim != 2 or id(p) in emb]
+        assert len(mat) + len(rest) == len(list(model.parameters()))
+        opts = [torch.optim.Muon(mat, lr=args.muon_lr, weight_decay=0.1,
+                                 adjust_lr_fn="match_rms_adamw"),
+                torch.optim.AdamW(rest, lr=args.lr, betas=(0.9, 0.95),
+                                  weight_decay=0.1)]
+        base_lr = {id(opts[0]): args.muon_lr, id(opts[1]): args.lr}
+        print(f"muon: {len(mat)} matrices, {len(rest)} adamw params")
+    else:
+        opts = [torch.optim.AdamW(model.parameters(), lr=args.lr,
+                                  betas=(0.9, 0.95), weight_decay=0.1)]
+        base_lr = {id(opts[0]): args.lr}
 
-    def lr_at(step):
+    def lr_at(step, base):
         if step < args.warmup:
-            return args.lr * (step + 1) / args.warmup
+            return base * (step + 1) / args.warmup
         p = (step - args.warmup) / max(1, args.steps - args.warmup)
-        return args.lr * (0.1 + 0.45 * (1 + math.cos(math.pi * p)))
+        return base * (0.1 + 0.45 * (1 + math.cos(math.pi * p)))
 
     gen = get_batches(train_data, args.batch_size, args.block_size,
                       seed=args.seed, device=device)
@@ -198,15 +224,18 @@ def main():
     best_val = float("inf")
 
     for step in range(args.steps):
-        for g in opt.param_groups:
-            g["lr"] = lr_at(step)
+        for o in opts:
+            for g in o.param_groups:
+                g["lr"] = lr_at(step, base_lr[id(o)])
         x, y = next(gen)
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             _, loss = model(x, y)
-        opt.zero_grad(set_to_none=True)
+        for o in opts:
+            o.zero_grad(set_to_none=True)
         loss.backward()
         gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        opt.step()
+        for o in opts:
+            o.step()
 
         if step % args.eval_every == 0 or step == args.steps - 1:
             val = evaluate(model, val_data, args.batch_size, args.block_size, device)
