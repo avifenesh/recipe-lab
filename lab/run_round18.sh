@@ -45,13 +45,18 @@ for mlr in 1e-2 2e-2 4e-2; do
     --data data12/fineweb_train.bin --val-data data12/fineweb_val.bin \
     --out "$out" 2>&1 | tail -1
 done
+# the first grid (1e-2/2e-2/4e-2) was left-censored — monotone toward
+# smaller lr, and 5e-3 then beat its best by 1.16 nats. Selection reads
+# every probe on disk so grid extensions are picked up automatically.
 MLR=$(~/venv/bin/python - <<'EOF'
-import json
-v = {m: json.load(open(f"results/r18_probe_A768_mlr{m}.json"))["curve"][-1]["val_loss"]
-     for m in ("1e-2", "2e-2", "4e-2")}
+import glob, json, re, sys
+v = {}
+for f in glob.glob("results/r18_probe_A768_mlr*.json"):
+    m = re.search(r"mlr(.+)\.json", f).group(1)
+    v[m] = json.load(open(f))["curve"][-1]["val_loss"]
 best = min(v, key=v.get)
 print(best)
-import sys; print(f"probe: {v} -> muon-lr={best}", file=sys.stderr)
+print(f"probe: {v} -> muon-lr={best}", file=sys.stderr)
 EOF
 )
 echo "round18 muon-lr=$MLR"
