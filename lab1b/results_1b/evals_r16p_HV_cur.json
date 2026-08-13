@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/r16p_HV_cur_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.378,
+  "piqa": 0.664,
+  "arc_easy": 0.5053,
+  "arc_challenge": 0.2977,
+  "winogrande": 0.503,
+  "boolq": 0.607,
+  "sciq": 0.564,
+  "lambada": 0.32,
+  "mean": 0.4799
+ }
+}

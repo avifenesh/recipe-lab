@@ -1,0 +1,15 @@
+{
+ "ckpt": "ckpts/r19_V_pm_best.pt",
+ "limit": 1000,
+ "results": {
+  "hellaswag": 0.409,
+  "piqa": 0.697,
+  "arc_easy": 0.5333,
+  "arc_challenge": 0.3144,
+  "winogrande": 0.52,
+  "boolq": 0.608,
+  "sciq": 0.646,
+  "lambada": 0.336,
+  "mean": 0.508
+ }
+}
