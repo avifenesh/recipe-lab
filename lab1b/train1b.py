@@ -44,6 +44,12 @@ STAGE_SETS = {
     # maximally anti-curriculum while stage-sequential; separates "staging
     # helps" from "THIS order helps".
     "wl": ["stage3_web", "stage1_math", "stage2_phil"],
+    # fm (round 20): web -> phil -> MATH. wl won r19 and it is the only cell
+    # whose epoch ENDS on an abstract stage (phil), so "recency of abstract
+    # data" is the live mechanism. fm keeps web first and ends on the OTHER
+    # abstract stage: if final-stage-abstract is the knob, fm ~ wl > cur/pm;
+    # if phil-specifically-last is the knob, fm lands with cur/pm.
+    "fm": ["stage3_web", "stage2_phil", "stage1_math"],
 }
 
 
