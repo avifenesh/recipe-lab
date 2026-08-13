@@ -1,75 +1,111 @@
 # recipe-lab
 
-**Question.** Does layer-looping (weight-tied block reuse) plus the
-ε = λ/(N√L) residual-scaling fix beat a FLOPs-matched vanilla transformer —
-and if so, where? Loopie (arXiv 2607.16051) proved layer-loop ordering but
-never scaled residuals; the residual-scaling paper (arXiv 2606.18524) proved
-ε = 1/N but never tested layer-loop. This repo combined them, pre-registered
-every round, and ran the campaign to a verdict.
+**Goal.** Find a training recipe that raises downstream quality for a small
+**hybrid-MoE** model — and prove each ingredient on its own rung before it
+goes in. Every round is pre-registered (predictions written into the run
+script *before* launch), judged on **evals, not loss**, and replicated across
+seeds before it is believed. Retractions are kept inline.
 
-**Verdict** (eleven GPU rounds + five numerical proofs + one MQAR probe;
-full ledger with receipts in [FINDINGS.md](FINDINGS.md)):
+Checkpoints, loss curves and per-task evals for every 1B cell:
+[huggingface.co/Avifenesh/recipe-lab-1b](https://huggingface.co/Avifenesh/recipe-lab-1b).
 
-- **ε = λ/(N√L) is real and mandatory for looped training.** Gain over
-  unscaled = 0.0122·(N−1) in val loss (R² = 0.993), holds at every arm's
-  optimal LR, and pins the optimal LR at its N=1 value (hyperparameter
-  transfer). Applies to attention and SSM mixers alike.
-- **On fresh single-epoch data, stored params beat looping** at every scale
-  tested — refuted at every N, both mixers, all LRs.
-- **In the data-constrained (multi-epoch) regime the verdict flips with
-  scale**: at d=768, loop+ε beat the param-matched vanilla on
-  best-achievable val for attention (3/3 seeds, −0.039) and pure SSM
-  (2/2 seeds, −0.026/−0.013), with a param-ordered overfit cliff (vanilla
-  degrades 2-4× more past its minimum).
-- **In hybrids, loop the state-mixer, never the retriever**: looping
-  attention through shared weights cost +0.25-0.28; looping only the SSM
-  blocks won by −0.018 with 26% fewer params (one compared seed).
-- **At inference, extrapolate loops with the training ε** (MQAR probe);
-  looped SSMs keep O(d_state·d) state regardless of loop count — the only
-  variant with an inference-memory win.
+## The recipe so far
 
-Two single-seed headlines were caught and retracted by the pre-registered
-no-single-seed rule; the retractions are kept inline in FINDINGS.md.
+| ingredient | status | evidence |
+|---|---|---|
+| **Hybrid-MoE backbone** (Mamba-2 SSD + GQA 4:1 + fine-grained MoE, shared expert, aux-loss-free balancing) | **IN** | at matched data, 0.41B-active MoE scores .4799 vs 1.30B-dense .4821 — **−0.2 pt for 3.2× less active compute** (r16p/r17) |
+| **Muon optimizer** (orthogonalized momentum on 2D hidden matrices, AdamW on embeddings/norms/scalars) | **IN** | beats AdamW on 4/4 arm×seed cells (−0.046 … −0.053 on vanilla) and reaches best-val in ~half the steps (r18) |
+| **Epoch-major staged data** (replay math → phil → web each epoch) | **IN** | every staged order beats a proportional shuffle by **1.8–2.5 pt** eval mean; 4 cells (r19) |
+| **Gutenberg-register philosophy** | **IN** | swapping in 3.8× more *modern academic* philosophy (SEP + PhilPapers) **lost 2.3 pt**, worst on the reasoning tasks it was meant to feed — register beats size and recency (r17) |
+| **Stage order within the epoch** | **open** | spread between staged orders is 0.65 pt, inside seed noise; r20 is testing whether "end each epoch on abstract data" is the mechanism |
+| Reasoning traces as a pretraining stage | **OUT** | −0.9 pt on the dense base, arc_challenge .334 → .288; they belong in post-training (T3) |
+| Layer-loop + ε=λ/(N√L) | **OUT** | won 13/13 paired runs under AdamW, then **vanished under Muon** (gaps +0.0025 / −0.0084, sign-flipping) — the flip was AdamW-conditional (r18) |
+
+### Two results worth reading in full
+
+**Loss is the wrong instrument.** Four separate times the loss ranking and
+the eval ranking disagreed, and the evals were right: philosophy ablation
+(better loss, worse evals), 8-epoch extension (frozen loss gap, reversed
+eval lead), the phil-pool swap, and the order permutations (`cur` has the
+best loss of the staged trio and the *worst* eval mean). Any rung decided on
+loss alone here would have shipped the wrong arm.
+
+**The curriculum story survived; its mythology did not.** Staging is worth
+~2 pt over shuffling, robustly. But "math first" — the thesis the campaign
+was built around — is not load-bearing: `phil→math→web` ties it, and
+`web→math→phil`, designed as the anti-curriculum, is the best cell measured
+(.5116 vs .5051). Recency of abstract data, not priority, is the live
+hypothesis (r20).
+
+Full ledger with receipts: [RESULTS_1B.md](RESULTS_1B.md) (1B rounds) and
+[FINDINGS.md](FINDINGS.md) (small-scale rounds + the closed loop campaign).
 
 ## Layout
 
-- [FINDINGS.md](FINDINGS.md) — the proven/refuted ledger, round by round.
+- [RESULTS_1B.md](RESULTS_1B.md) — 1B ledger: the factorial, the four
+  owner-set targets, the MoE/attribution/order rounds, incidents log.
+- [FINDINGS.md](FINDINGS.md) — small-scale ledger, the loop campaign's
+  proven/refuted list, the Muon verdict.
 - [RECIPE.md](RECIPE.md) — hypothesis log: sources, pre-registered
-  predictions, per-round designs and results as they happened.
-- `proof1..5_*.py` — CPU-runnable numerical proofs of the accumulation
-  pathology, layer-loop vs model-loop correlation, pre-LN survival, LR
-  transfer, and mixer-agnosticism.
-- `lab/` — training code (`model.py`, `train.py`), per-round drivers
-  (`run_round*.sh`, pre-registered predictions in the headers), analyzers,
-  and the MQAR probe (`mqar_loop.py`, receipts in `mqar.log`/`mqar2.log`).
-- `results/` — every run's loss curve and config as JSON, named
-  `<phase>_<arm>_s<seed>.json`.
+  predictions, designs as they happened.
+- [SPEC_PILOT_MOE.md](SPEC_PILOT_MOE.md) — the 4B-total/1.1B-active pilot
+  spec, cost model from measured throughput, post-training fork.
+- `lab/` — small-scale harness (`model.py`, `train.py` with `--opt muon`),
+  per-round drivers, numerical proofs, MQAR probe.
+- `lab1b/` — 1B harness: `model1b.py` (dense), `model_moe.py` (hybrid-MoE),
+  `train1b.py` / `train_moe.py`, `prepare_staged_data.py`,
+  `prepare_phil_pool.py`, `eval1b.py` / `eval_moe.py`, `upload_hf.py`,
+  per-round `run_round*.sh` + `watch_teardown_*.sh`.
+- `results/`, `evals/`, `lab1b/results_1b/` — every curve and eval as JSON.
+- `proof1..5_*.py` — CPU numerical proofs from the loop campaign.
 
 ## Reproduce
 
-Any CUDA GPU with ~46 GB works for the d=768 rounds; d=384 rounds fit in
-much less. Rounds were run on a single rented L40S; the MQAR probe runs on
-a desktop GPU in ~10 minutes.
+Small-scale rounds fit on one 46 GB GPU; the 1B rounds used 8×H100 spot.
 
 ```bash
 pip install torch numpy tiktoken datasets
 
+# --- small scale (d=384..1536) ---
 cd lab
-# tokenize FineWeb-Edu (12.5M-token bin for the epoch rounds used --tokens 12500000)
 python prepare_data.py --tokens 250000000 --out-dir data
+python train.py --arm A768 --opt muon --muon-lr 1e-3 --steps 20000 \
+  --data data12/fineweb_train.bin --val-data data12/fineweb_val.bin \
+  --out results/smoke.json
+bash run_round18.sh          # a full pre-registered round
 
-# any single arm
-python train.py --arm C --steps 4000 --out results/smoke_C_s7.json
-
-# a full pre-registered round
-bash run_round10.sh
-
-# numerical proofs (CPU, seconds each)
-python ../proof1_accumulation.py
-
-# MQAR probe
-python mqar_loop.py
+# --- 1B scale ---
+cd ../lab1b
+python prepare_staged_data.py --out-dir data1b        # 3B-token staged corpus
+python prepare_phil_pool.py  --out-dir data_phil      # modern phil pool
+torchrun --standalone --nproc_per_node=8 train1b.py \
+  --arm V --order cur --data-dir data1b --lr 6e-4 --out results/V_cur.json
+python eval1b.py --ckpt ckpts/V_cur_best.pt --out evals_V_cur.json --limit 1000
+python upload_hf.py --tag V_cur                       # publish weights+evals
 ```
+
+### Operational notes (earned the hard way)
+
+- **Muon's LR lives on a different scale.** With `adjust_lr_fn=match_rms_adamw`
+  the optimum here was `1e-3`, 20× below the published default; the first
+  probe grid was left-censored and picked its own edge. Always bracket an
+  interior minimum.
+- **Muon overfits multi-epoch data fast** (final val 7.0 vs best 4.63 at
+  19.6 epochs). Best-val early-stop is mandatory, and any
+  degradation-to-a-fixed-terminal-step metric will lie to you.
+- **Verify artifacts by exact filename.** A glob (`V_std*_best.pt`) was
+  satisfied by a sibling (`V_std_ext8_best.pt`) and a 5-epoch checkpoint was
+  lost. Every teardown watcher now gates on exact names, and
+  `upload_hf.py` treats a missing `_best.pt` as fatal.
+- **Diagnose an unreachable box in this order**: spot request state → your
+  own public IP → only then touch the instance. A timed-out SSH looks
+  identical for spot reclaim, ISP rotation (SG no longer allows you) and a
+  genuinely wedged host; all three happened, each needed a different fix.
+- **Two silent MoE bugs that pass a forward-only check**: `torch.where`
+  masking in the SSD scan differentiates the untaken branch (inf × 0 = NaN
+  grads while the printed loss looks fine — mask multiplicatively), and the
+  expert-load buffer must accumulate across the whole optimizer step or the
+  balancer sees 1/grad_accum of the routing and parks at ~20% token drop.
 
 ## License
 

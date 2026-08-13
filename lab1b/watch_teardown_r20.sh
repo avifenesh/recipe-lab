@@ -38,6 +38,10 @@ while true; do
   AWS_PROFILE=default aws ec2 terminate-instances --region us-east-2 \
     --instance-ids $IID >/dev/null
   echo "TORN_DOWN $IID"
+  # publish AFTER teardown: artifacts are already local, so the box stops
+  # costing money while the ~10 GB push runs.
+  python3 "$(dirname "$0")/upload_hf.py" --tag r20_V_fm_s7 --tag r20_V_wl_s13 \
+    || echo "WARN hf upload failed — artifacts are safe locally, retry by hand"
   break
 done
 echo R20_DOWN
