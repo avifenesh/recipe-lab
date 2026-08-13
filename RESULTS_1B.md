@@ -657,3 +657,61 @@ strong support for the pilot's MoE architecture choice.
    ~1/3 active compute in the exact pilot regime.
 3. SPEC_PILOT_MOE's data table needs the phil row rewritten (it
    currently recommends exactly the swap that just lost).
+
+# Round 19 — curriculum ORDER permutations (2026-08-13, CLOSED)
+
+Two new dense cells (V, 1.30B, AdamW, data1b, 5 epochs, seed 7) against
+the factorial's controls. One brief spot blip (resumed 26001, replay val
+identical to 4 decimals). ~$580.
+
+| order | sequence | best loss | eval mean |
+|---|---|---|---|
+| **wl** | **web→math→phil** | **2.7110** | **.5116** |
+| pm | phil→math→web | 2.6988 | .5080 |
+| cur | math→phil→web | 2.6969 | .5051 |
+| std | proportional shuffle | 2.7062 | .4870 |
+
+Per-task (cur / pm / wl): arc_easy .5228/.5333/**.5439**, lambada
+.350/.336/**.362**, sciq .607/.646/.633, arc_challenge **.3344**/.3144/.3278,
+winogrande **.530**/.520/.525, piqa .706/.697/.702, boolq .589/.608/.598,
+hellaswag .402/.409/.401.
+
+## Pre-registered verdicts
+
+- **P1 (abstract-first mechanism): PASS as written, then overtaken by P3.**
+  pm (.5080) within noise of cur (.5051), both >> std. Order within
+  {math, phil} doesn't matter — math-first is NOT load-bearing.
+- **P2 (math-first load-bearing): FAIL** — pm did not land below cur.
+- **P3 (staging vs order): STAGING IS THE MECHANISM, and the "anti"
+  order is the best cell of the campaign.** wl > std by +2.5pt, and
+  wl > cur by +0.65pt. All three staged orders beat the shuffle by
+  1.8-2.5pt; the spread BETWEEN staged orders (0.65pt) is ~4x smaller
+  than staged-vs-shuffle (1.8-2.5pt).
+
+## Honest read
+
+1. **Epoch-major staging is the recipe ingredient, not the mythology of
+   which stage opens.** The campaign's "math first" story does not
+   survive: web→math→phil — the order designed as the anti-curriculum —
+   is the best cell at 1B/5ep/seed 7.
+2. Why wl edges the others (mechanism guess, single seed): whatever
+   stage comes LAST before the eval checkpoint is freshest; wl ends each
+   epoch on phil+math (abstract), starts on web — and lambada/arc_easy
+   (language/knowledge tasks) are exactly where wl gains. Recency, not
+   priority, may be the real knob. A deliberate rung (same stages, vary
+   only the final stage) would isolate it.
+3. Caveats: 1 seed, 1000/task; wl's +0.65pt over cur is inside the
+   plausible seed noise for this suite (dense same-arm spreads ~0.5pt).
+   The robust claim is staged >> shuffled (2-2.5pt, replicated across
+   4 staged cells); the wl>cur ordering claim needs a seed-13 pair
+   before it goes in the recipe.
+4. Loss again mis-ranks: cur has the best loss (2.6969) and the WORST
+   eval mean of the staged trio. Fourth time evals reversed loss.
+
+## Recipe state after r19
+
+- Backbone: hybrid-MoE (r16p/r17: ≈dense at 1/3 active) — IN
+- Optimizer: Muon, lr bracketed, early-stop mandatory (r18) — IN
+- Data: Gutenberg-register phil (r17), staged epoch-major (r19) — IN
+- Stage ORDER: staging >> shuffle is settled; exact order is a ~0.5pt
+  refinement pending seeds. Thinking/agentic stay post-training (T3/T4).
