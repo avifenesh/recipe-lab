@@ -3,7 +3,9 @@
 # flags READY_FOR_TEARDOWN. Cancel spot request BEFORE terminate.
 KEY=~/.ssh/fpv-drone-audio-train-20260701.pem
 DEST=/home/avifenesh/projects/recipe-lab/lab1b/results_1b
-IP=18.188.240.110
+# IP moved 18.188.240.110 -> 16.59.123.191 after a spot marked-for-stop
+# reclaim (capacity returned in minutes; ckpt at step 10000 intact).
+IP=16.59.123.191
 IID=i-016a0cbeda671f516
 mkdir -p "$DEST"
 while true; do
