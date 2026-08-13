@@ -715,3 +715,41 @@ hellaswag .402/.409/.401.
 - Data: Gutenberg-register phil (r17), staged epoch-major (r19) — IN
 - Stage ORDER: staging >> shuffle is settled; exact order is a ~0.5pt
   refinement pending seeds. Thinking/agentic stay post-training (T3/T4).
+
+# Round 20 — recency mechanism; ABORTED before replication (2026-08-13)
+
+Owner closed the box after the fm cell finished ("taking too much time")
+— V_wl seed-13 replication was ~5% in and is discarded. One completed
+cell, ~$640 total for the round including the interrupted wl start.
+
+**V_fm (web→phil→math, seed 7): best loss 2.7096, eval mean .5022.**
+Per-task: arc_easy .5456 (best of ALL cells), lambada .378 (best of all),
+sciq .597, boolq .591, piqa .698, hellaswag .391, winogrande .503,
+arc_challenge .3144.
+
+## Pre-registered verdicts
+
+- **P1 (recency of abstract data): FAIL.** fm ends each epoch on an
+  abstract stage, exactly like wl — and landed at .5022, below cur
+  (.5051) and 0.94pt below wl (.5116). "End on abstract" is NOT the knob.
+- **P2 (phil-specifically-last): SUPPORTED, one seed.** What separates
+  wl from fm is only WHICH abstract stage closes the epoch. The per-task
+  mirror is clean: fm keeps wl's knowledge/completion gains (arc_easy,
+  lambada — both campaign bests) but gives back the reasoning pair
+  (winogrande .503 vs wl .525, arc_challenge .3144 vs .3278). Philosophy
+  adjacent to the checkpoint protects reasoning; math there does not.
+  Consistent with T2 (phil buys reasoning) from an independent direction.
+- **P3 (wl seed-13 replication): NOT RUN** — aborted. wl > cur therefore
+  remains a single-seed observation and does NOT enter the recipe.
+
+## What stands after r19+r20 (order block closed unless owner reopens)
+
+1. **Staged epoch-major >> shuffled: settled** (+1.8-2.5pt, 5 staged
+   cells vs std). This is the recipe ingredient.
+2. **Order within the epoch: unresolved refinement, bounded at ~0.9pt.**
+   Single-seed ranking wl .5116 > pm .5080 > cur .5051 > fm .5022, with
+   a coherent phil-last story but no replication. Recorded as a
+   HYPOTHESIS, not a rule.
+3. Practical default for the pilot: keep phil as the last stage of each
+   epoch (wl order) — best single-seed cell and mechanistically
+   consistent — while claiming only the staging effect.
