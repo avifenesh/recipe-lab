@@ -15,7 +15,7 @@ Checkpoints, loss curves and per-task evals for every 1B cell:
 |---|---|---|
 | **Hybrid-MoE backbone** (Mamba-2 SSD + GQA 4:1 + fine-grained MoE, shared expert, aux-loss-free balancing) | **IN** | at matched data, 0.41B-active MoE scores .4799 vs 1.30B-dense .4821 — **−0.2 pt for 3.2× less active compute** (r16p/r17) |
 | **Muon optimizer** (orthogonalized momentum on 2D hidden matrices, AdamW on embeddings/norms/scalars) | **IN** | beats AdamW on 4/4 arm×seed cells (−0.046 … −0.053 on vanilla) and reaches best-val in ~half the steps (r18) |
-| **Epoch-major staged data** (replay math → phil → web each epoch) | **IN** | every staged order beats a proportional shuffle by **1.8–2.5 pt** eval mean; 4 cells (r19) |
+| **Epoch-major staged data** (replay math → phil → web each epoch) | **IN** | every staged order beats a proportional shuffle by **1.5–2.5 pt** eval mean; 5 cells (r19, r20) |
 | **Gutenberg-register philosophy** | **IN** | swapping in 3.8× more *modern academic* philosophy (SEP + PhilPapers) **lost 2.3 pt**, worst on the reasoning tasks it was meant to feed — register beats size and recency (r17) |
 | **Stage order within the epoch** | **open** | spread between staged orders is 0.94 pt, single seed each; r20 refuted "end each epoch on abstract data" (fm .5022); phil-last is a one-seed hypothesis, pilot default only (r20) |
 | Reasoning traces as a pretraining stage | **OUT** | −0.9 pt on the dense base, arc_challenge .334 → .288; they belong in post-training (T3) |

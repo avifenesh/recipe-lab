@@ -744,7 +744,7 @@ arc_challenge .3144.
 
 ## What stands after r19+r20 (order block closed unless owner reopens)
 
-1. **Staged epoch-major >> shuffled: settled** (+1.8-2.5pt, 5 staged
+1. **Staged epoch-major >> shuffled: settled** (+1.5-2.5pt, 5 staged
    cells vs std). This is the recipe ingredient.
 2. **Order within the epoch: unresolved refinement, bounded at ~0.9pt.**
    Single-seed ranking wl .5116 > pm .5080 > cur .5051 > fm .5022, with
