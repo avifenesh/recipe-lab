@@ -17,7 +17,7 @@ Checkpoints, loss curves and per-task evals for every 1B cell:
 | **Muon optimizer** (orthogonalized momentum on 2D hidden matrices, AdamW on embeddings/norms/scalars) | **IN** | beats AdamW on 4/4 arm×seed cells (−0.046 … −0.053 on vanilla) and reaches best-val in ~half the steps (r18) |
 | **Epoch-major staged data** (replay math → phil → web each epoch) | **IN** | every staged order beats a proportional shuffle by **1.8–2.5 pt** eval mean; 4 cells (r19) |
 | **Gutenberg-register philosophy** | **IN** | swapping in 3.8× more *modern academic* philosophy (SEP + PhilPapers) **lost 2.3 pt**, worst on the reasoning tasks it was meant to feed — register beats size and recency (r17) |
-| **Stage order within the epoch** | **open** | spread between staged orders is 0.65 pt, inside seed noise; r20 is testing whether "end each epoch on abstract data" is the mechanism |
+| **Stage order within the epoch** | **open** | spread between staged orders is 0.94 pt, single seed each; r20 refuted "end each epoch on abstract data" (fm .5022); phil-last is a one-seed hypothesis, pilot default only (r20) |
 | Reasoning traces as a pretraining stage | **OUT** | −0.9 pt on the dense base, arc_challenge .334 → .288; they belong in post-training (T3) |
 | Layer-loop + ε=λ/(N√L) | **OUT** | won 13/13 paired runs under AdamW, then **vanished under Muon** (gaps +0.0025 / −0.0084, sign-flipping) — the flip was AdamW-conditional (r18) |
 
@@ -34,8 +34,9 @@ loss alone here would have shipped the wrong arm.
 ~2 pt over shuffling, robustly. But "math first" — the thesis the campaign
 was built around — is not load-bearing: `phil→math→web` ties it, and
 `web→math→phil`, designed as the anti-curriculum, is the best cell measured
-(.5116 vs .5051). Recency of abstract data, not priority, is the live
-hypothesis (r20).
+(.5116 vs .5051). Recency of abstract data failed its test in r20
+(`web→phil→math` .5022); ending the epoch on philosophy is the remaining
+single-seed hypothesis.
 
 Full ledger with receipts: [RESULTS_1B.md](RESULTS_1B.md) (1B rounds) and
 [FINDINGS.md](FINDINGS.md) (small-scale rounds + the closed loop campaign).
@@ -48,6 +49,10 @@ Full ledger with receipts: [RESULTS_1B.md](RESULTS_1B.md) (1B rounds) and
   proven/refuted list, the Muon verdict.
 - [RECIPE.md](RECIPE.md) — hypothesis log: sources, pre-registered
   predictions, designs as they happened.
+- [PAPER.md](PAPER.md): draft paper on the loop campaign ("Looping Beats
+  Parameters Under the Data Wall").
+- [SPEC_1B.md](SPEC_1B.md), [SPEC_1B_CURRICULUM.md](SPEC_1B_CURRICULUM.md):
+  the 1B kill-or-confirm spec and the curriculum × loop factorial.
 - [SPEC_PILOT_MOE.md](SPEC_PILOT_MOE.md) — the 4B-total/1.1B-active pilot
   spec, cost model from measured throughput, post-training fork.
 - `lab/` — small-scale harness (`model.py`, `train.py` with `--opt muon`),
@@ -64,11 +69,14 @@ Full ledger with receipts: [RESULTS_1B.md](RESULTS_1B.md) (1B rounds) and
 Small-scale rounds fit on one 46 GB GPU; the 1B rounds used 8×H100 spot.
 
 ```bash
-pip install torch numpy tiktoken datasets
+pip install torch numpy tiktoken datasets huggingface_hub
 
 # --- small scale (d=384..1536) ---
 cd lab
 python prepare_data.py --tokens 250000000 --out-dir data
+mkdir -p data12                                       # 12.5M-token subset the rounds use
+head -c 25000000 data/fineweb_train.bin > data12/fineweb_train.bin
+cp data/fineweb_val.bin data12/
 python train.py --arm A768 --opt muon --muon-lr 1e-3 --steps 20000 \
   --data data12/fineweb_train.bin --val-data data12/fineweb_val.bin \
   --out results/smoke.json
